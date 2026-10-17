@@ -1,0 +1,30 @@
+Bandwidth Brawl for macOS (AU + VST3, Apple Silicon and Intel)
+
+Easiest way
+  1. Right-click "Install.command" and choose Open (a plain double-click may be
+     blocked the first time, because the script isn't from an identified developer).
+  2. Click Open in the warning, and wait for "Installed" in the Terminal window.
+
+Or by hand, in Terminal, from inside this folder:
+  cp -R "Bandwidth Brawl.component" ~/Library/Audio/Plug-Ins/Components/
+  cp -R "Bandwidth Brawl.vst3" ~/Library/Audio/Plug-Ins/VST3/
+  xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/"Bandwidth Brawl.component" ~/Library/Audio/Plug-Ins/VST3/"Bandwidth Brawl.vst3"
+
+Then in Ableton Live 11: Preferences > Plug-Ins > turn on "Use Audio Units"
+and/or "Use VST3 Plug-In System Folders" > Rescan. It appears under the
+manufacturer "Bytebent Audio". Use either the AU or the VST3, not both.
+
+Setting up the sidechain (input B)
+  1. Put Bandwidth Brawl on the track that should be input A.
+  2. Open the plugin's device in Ableton and click the small triangle in its
+     title bar to show the sidechain section. Turn Sidechain on and pick the
+     track that should be input B in the "Audio From" menu.
+  3. The "B" chip at the top of the plugin lights up once sidechain audio arrives.
+  Without a sidechain, input B is silent and the plugin leaves input A alone at
+  high budgets (a silent input never claims bandwidth).
+
+"Bandwidth Brawl.app" is a standalone version for quick tests outside Ableton.
+
+The xattr step is needed because the plugin isn't signed with a paid Apple
+developer certificate; it removes the "downloaded from the internet" flag so
+macOS lets Ableton load it.

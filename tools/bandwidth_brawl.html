@@ -1,0 +1,1198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bandwidth Brawl</title>
+<style>
+:root{
+  --platinum:#dcdce0; --platinum-hi:#ececef; --platinum-lo:#c4c4ca; --etch:#9c9ca4;
+  --ink:#000; --ink-soft:#4a4a52; --inset:#f4f4f6;
+  --blue:#009ddc; --blue-dk:#00699a; --red:#e03a3e; --red-dk:#9e1f23; --graphite:#6e6e78;
+  --ui:"Lucida Grande","Lucida Sans Unicode",Geneva,Verdana,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:#b9b9c0;font:12px/1.3 var(--ui);color:var(--ink);padding:20px 12px 40px}
+.window{max-width:1060px;margin:0 auto;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.55) 0 1px,rgba(255,255,255,0) 1px 2px,rgba(0,0,0,.035) 2px 3px,rgba(0,0,0,0) 3px 4px),var(--platinum);
+  border:1px solid #7d7d86;border-radius:9px;box-shadow:0 1px 0 #fff inset,0 14px 40px rgba(0,0,0,.28);overflow:hidden}
+.titlebar{display:flex;align-items:center;gap:12px;padding:9px 14px 8px;background:linear-gradient(#f6f6f8,#d6d6db);border-bottom:1px solid #8e8e96;flex-wrap:wrap}
+.badge{display:flex;width:22px;height:18px;border-radius:3px;overflow:hidden;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.badge i{flex:1}
+.titlebar h1{margin:0;font-size:15px;font-weight:700;letter-spacing:-.2px}
+.sub{color:var(--ink-soft);font-size:11px}
+.spacer{flex:1}
+.status{font-size:11px;color:var(--ink-soft)}
+.status.ok{color:#2c7a2c}.status.err{color:var(--red-dk);font-weight:700}
+.body{padding:14px;display:grid;gap:12px}
+.panel{background:var(--platinum-hi);border:1px solid var(--etch);border-radius:6px;box-shadow:0 1px 0 #fff,0 1px 2px rgba(0,0,0,.12) inset;padding:10px}
+.panel-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.panel-head h2{margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px}
+.panel-head .bar{height:3px;width:18px;border-radius:2px}
+.readout{font-size:11px;color:var(--ink-soft)}.readout b{color:var(--ink)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,.4) inset,0 1px 1px rgba(255,255,255,.6);flex:none}
+.dot.a{background:radial-gradient(circle at 35% 30%,#bfeaff,var(--blue) 55%,var(--blue-dk))}
+.dot.b{background:radial-gradient(circle at 35% 30%,#ffc9ca,var(--red) 55%,var(--red-dk))}
+
+/* buttons */
+button,select,input[type=number]{font:11px var(--ui);color:var(--ink);padding:3px 10px;border-radius:11px;border:1px solid #7d7d86;
+  background:linear-gradient(#fff,#d9d9de);box-shadow:0 1px 0 rgba(255,255,255,.8) inset,0 1px 1px rgba(0,0,0,.12);cursor:pointer}
+input[type=number]{border-radius:4px;width:62px;background:var(--inset);box-shadow:0 1px 1px rgba(0,0,0,.12) inset;cursor:text}
+select{border-radius:4px}
+button:active:not(:disabled){background:linear-gradient(#d0d0d6,#ececf0)}
+button:disabled{opacity:.45;cursor:default}
+button.go{color:#fff;font-weight:700;border-color:var(--blue-dk);background:linear-gradient(#7fd3f5,var(--blue) 50%,var(--blue-dk));text-shadow:0 -1px 0 rgba(0,0,0,.3)}
+button.danger.armed{color:#fff;border-color:var(--red-dk);background:linear-gradient(#f59a9c,var(--red) 50%,var(--red-dk))}
+.seg{display:inline-flex;border:1px solid #7d7d86;border-radius:11px;overflow:hidden;box-shadow:0 1px 1px rgba(0,0,0,.12)}
+.seg button{border:0;border-radius:0;box-shadow:none;border-left:1px solid #a8a8b0}
+.seg button:first-child{border-left:0}
+.seg button.on{background:linear-gradient(#55555c,#2a2a30);color:#fff}
+.seg button.on.a{background:linear-gradient(#7fd3f5,var(--blue) 50%,var(--blue-dk))}
+.seg button.on.b{background:linear-gradient(#f59a9c,var(--red) 50%,var(--red-dk))}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chk{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.chk input{appearance:none;-webkit-appearance:none;margin:0;width:13px;height:13px;border-radius:3px;border:1px solid #6e6e78;background:linear-gradient(#fff,#d4d4da);position:relative;cursor:pointer}
+.chk input:checked{background:linear-gradient(#bfeaff,var(--blue) 60%,var(--blue-dk));border-color:var(--blue-dk)}
+.chk input:checked::after{content:"";position:absolute;left:3.5px;top:.5px;width:4px;height:7px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+
+/* inputs */
+.inputs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.drop{border:1.5px dashed #9c9ca4;border-radius:6px;padding:12px;cursor:pointer;display:flex;gap:10px;align-items:center;background:var(--inset);min-height:56px}
+.drop.over{border-style:solid}
+.drop.a.over,.drop.a.loaded{border-color:var(--blue)}
+.drop.b.over,.drop.b.loaded{border-color:var(--red)}
+.drop .who{font-weight:700}
+.drop .info{color:var(--ink-soft);font-size:11px;overflow:hidden;text-overflow:ellipsis}
+.drop button{margin-left:auto}
+
+/* territory */
+.strip{display:block;width:100%;height:150px;background:#0b0b0e;border-radius:4px;box-shadow:0 0 0 1px #000,0 2px 4px rgba(0,0,0,.5) inset}
+.legend{display:flex;align-items:center;gap:14px;margin-top:6px;font-size:10.5px;color:var(--ink-soft);flex-wrap:wrap}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.tug{margin-top:10px;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}
+.tug .lbl{font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px;min-width:64px}
+.tug .lbl.r{justify-content:flex-end}
+.meter{position:relative;height:18px;border-radius:9px;overflow:hidden;background:#2a2a30;box-shadow:0 0 0 1px #55555c,0 2px 3px rgba(0,0,0,.6) inset}
+.meter .fa,.meter .fb{position:absolute;top:0;bottom:0}
+.meter .fa{left:0;background:linear-gradient(#7fd3f5,var(--blue) 45%,var(--blue-dk))}
+.meter .fb{right:0;background:linear-gradient(#f59a9c,var(--red) 45%,var(--red-dk))}
+.meter .gloss{position:absolute;left:4px;right:4px;top:2px;height:6px;border-radius:4px;background:linear-gradient(rgba(255,255,255,.55),rgba(255,255,255,0))}
+.meter .centre{position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:rgba(255,255,255,.75)}
+.meter.idle .fa,.meter.idle .fb{opacity:.25}
+
+/* timeline */
+#time{font-size:11px;min-width:120px;color:var(--ink-soft)}
+.pill{font-size:10.5px;padding:2px 8px;border-radius:10px;border:1px solid #9c9ca4;background:var(--inset);color:var(--ink-soft)}
+.pill.stale{background:linear-gradient(#f59a9c,var(--red) 55%,var(--red-dk));color:#fff;border-color:var(--red-dk)}
+.prog{height:6px;width:110px;border-radius:3px;background:#2a2a30;overflow:hidden;display:none}
+.prog div{height:100%;width:0;background:linear-gradient(90deg,var(--blue),var(--red))}
+.wavewrap{margin-top:8px;border-radius:4px;overflow:hidden;box-shadow:0 0 0 1px var(--etch)}
+#wave{display:block;width:100%;height:200px;background:var(--inset);cursor:crosshair;touch-action:none}
+#fight{display:block;width:100%;height:16px;background:#2a2a30}
+#ruler{display:block;width:100%;height:20px;background:linear-gradient(#e4e4e8,#cfcfd5);cursor:pointer}
+.hint{font-size:10.5px;color:var(--ink-soft);margin-top:6px}
+
+/* knobs */
+.groups{display:grid;grid-template-columns:1fr 210px;gap:12px}
+.stack{display:grid;gap:12px}
+.knobs{display:flex;justify-content:space-around;gap:6px;flex-wrap:wrap}
+.knob{display:flex;flex-direction:column;align-items:center;gap:4px;width:88px;position:relative}
+.knob .name{font-size:11px;font-weight:700;cursor:pointer;border-bottom:1px dotted transparent}
+.knob .name:hover{border-bottom-color:var(--ink-soft)}
+.knob.sel .name{border-bottom:2px solid var(--ink)}
+.knob .val{font-size:10.5px;color:var(--ink-soft);background:var(--inset);border:1px solid #b4b4bb;border-radius:3px;padding:1px 5px;min-width:64px;text-align:center;box-shadow:0 1px 1px rgba(0,0,0,.12) inset;white-space:nowrap}
+.knob .auto{position:absolute;top:-2px;right:2px;font-size:8.5px;font-weight:700;color:#fff;background:var(--ink);border-radius:3px;padding:1px 3px;display:none}
+.knob.automated .auto{display:block}
+.knob.automated .dial{opacity:.5}
+.dial{--v:.5;--s:58px;position:relative;width:var(--s);height:var(--s);border-radius:50%;padding:5px;cursor:ns-resize;touch-action:none;outline:none}
+.dial:focus-visible{box-shadow:0 0 0 2px var(--blue)}
+.dial::before{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--platinum)}
+.cap{position:absolute;inset:7px;border-radius:50%;
+  background:radial-gradient(circle at 50% 22%,rgba(255,255,255,.95) 0 18%,rgba(255,255,255,0) 46%),radial-gradient(circle at 50% 80%,#f7f7fa,#c8c8ce 60%,#9a9aa3);
+  box-shadow:0 2px 3px rgba(0,0,0,.35),0 0 0 1px #7d7d86,0 -1px 0 rgba(255,255,255,.8) inset}
+.cap::after{content:"";position:absolute;left:50%;top:5px;width:3px;height:30%;margin-left:-1.5px;border-radius:2px;background:#1a1a1e;
+  transform-origin:50% calc(var(--s)/2 - 12px);transform:rotate(calc(-135deg + var(--v)*270deg))}
+.knob.sm{width:76px}
+.knob.sm .dial{--s:46px}
+.knob.sm .cap::after{top:4px;transform-origin:50% calc(var(--s)/2 - 11px)}
+.side .knobs{flex-direction:column;align-items:center;gap:8px}
+.row-extra{display:flex;align-items:center;gap:14px;margin-top:8px;padding-top:8px;border-top:1px solid #c4c4ca;font-size:11px;flex-wrap:wrap}
+footer{display:flex;align-items:center;gap:10px;padding:8px 14px;border-top:1px solid #a8a8b0;background:linear-gradient(#e4e4e8,#cfcfd5);font-size:11px;color:var(--ink-soft);flex-wrap:wrap}
+footer label{display:inline-flex;align-items:center;gap:5px}
+@media (max-width:760px){.groups,.inputs{grid-template-columns:1fr}.side .knobs{flex-direction:row;justify-content:space-around}#wave{height:150px}}
+</style>
+</head>
+<body>
+<div class="window">
+  <div class="titlebar">
+    <span class="badge" aria-hidden="true"><i style="background:var(--blue)"></i><i style="background:var(--red)"></i></span>
+    <h1>Bandwidth Brawl</h1>
+    <span class="sub">Bytebent Audio · test bench</span>
+    <span class="spacer"></span>
+    <span id="pystatus" class="status">loading Python…</span>
+  </div>
+
+  <div class="body">
+    <div class="inputs">
+      <div class="drop a" id="dropA"><span class="dot a"></span><div><div class="who">A · main input</div><div class="info" id="infoA">Drop a WAV or MP3, or click to choose</div></div>
+        <input type="file" id="fileA" accept=".wav,.mp3,.aif,.aiff,.flac,.ogg,audio/*" hidden></div>
+      <div class="drop b" id="dropB"><span class="dot b"></span><div><div class="who">B · sidechain</div><div class="info" id="infoB">Drop a WAV or MP3, or click to choose</div></div>
+        <button id="clearB" hidden title="Remove B">Remove</button>
+        <input type="file" id="fileB" accept=".wav,.mp3,.aif,.aiff,.flac,.ogg,audio/*" hidden></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Territory</h2>
+        <span class="spacer"></span>
+        <span class="readout" id="terrRead">render to see the fight</span>
+      </div>
+      <canvas class="strip" id="strip"></canvas>
+      <div class="legend">
+        <span><span class="sw" style="background:var(--blue)"></span>written by A</span>
+        <span><span class="sw" style="background:var(--red)"></span>written by B</span>
+        <span>colour fades to grey over 1 s since written · height = level · white line = playhead</span>
+      </div>
+      <div class="tug">
+        <span class="lbl"><span class="dot a"></span><span id="tugA">A –</span></span>
+        <div class="meter idle" id="meter"><div class="fa" id="fa" style="width:50%"></div><div class="fb" id="fb" style="width:50%"></div><div class="gloss"></div><div class="centre"></div></div>
+        <span class="lbl r"><span id="tugB">– B</span><span class="dot b"></span></span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="row">
+        <button id="play" disabled>▶ Play</button>
+        <div class="seg" id="listen">
+          <button data-v="a" class="a">A</button><button data-v="b" class="b">B</button><button data-v="dry">A+B dry</button><button data-v="out" disabled>Brawl</button>
+        </div>
+        <span id="time">0:00.0 / 0:00.0</span>
+        <span class="spacer"></span>
+        <span id="stale" class="pill">not rendered</span>
+        <div class="prog" id="prog"><div></div></div>
+        <button id="render" class="go" disabled>Render</button>
+        <button id="download" disabled>Download WAV</button>
+      </div>
+      <div class="wavewrap">
+        <canvas id="wave"></canvas>
+        <canvas id="fight" title="Budget split over time: blue = A's share, red = B's share"></canvas>
+        <canvas id="ruler"></canvas>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <span>Automation lane:</span>
+        <select id="lane"></select>
+        <button id="undo" disabled title="Ctrl/Cmd+Z">↶ Undo</button>
+        <button id="redo" disabled title="Ctrl/Cmd+Shift+Z">↷ Redo</button>
+        <button id="clearLane">Clear lane</button>
+        <button id="clearAll" class="danger">Clear all</button>
+      </div>
+      <div class="hint">Waveform: A on top in blue, B underneath in red, the rendered result in black. Strip under it: who got the budget. Click the waveform to add an automation point, drag to move, double-click or right-click to delete. Click the bottom ruler to seek. Space plays and pauses. Click a knob's name to show its lane.</div>
+    </div>
+
+    <div class="groups">
+      <div class="stack">
+        <div class="panel">
+          <div class="panel-head"><span class="bar" style="background:linear-gradient(90deg,var(--blue) 50%,var(--red) 50%)"></span><h2>Fight</h2></div>
+          <div class="knobs" id="g_fight"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="bar" style="background:var(--graphite)"></span><h2>Buffer</h2></div>
+          <div class="knobs" id="g_buffer"></div>
+          <div class="row-extra">
+            <label class="chk"><input type="checkbox" id="syncLoop"> Sync loop to tempo</label>
+            <label class="chk"><input type="checkbox" id="syncHold"> Sync hold to tempo</label>
+            <label style="display:inline-flex;align-items:center;gap:5px">Tempo <input type="number" id="bpm" value="120" min="20" max="300" step="0.1"> BPM</label>
+          </div>
+        </div>
+      </div>
+      <div class="panel side">
+        <div class="panel-head"><span class="bar" style="background:var(--graphite)"></span><h2>In / Out</h2></div>
+        <div class="knobs" id="g_io"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <label>Seed <input type="number" id="seed" value="1" min="0" step="1"></label>
+    <span class="spacer"></span>
+    <button id="savePreset">Save preset</button>
+    <button id="loadPreset">Load preset</button>
+    <input type="file" id="presetFile" accept=".json,application/json" hidden>
+    <button id="resetKnobs">Reset knobs</button>
+  </footer>
+</div>
+
+<script type="text/x-python" id="pysrc">
+"""
+Bandwidth Brawl: two inputs fight over one bandwidth budget for one loop buffer.
+
+One loop buffer plays on repeat. Input A and input B each keep a *target*
+(what the loop would contain if that input had its way) and a *model* (what
+that side last wrote at each position). A side's pending change is where its
+target differs from its model: the parts where that input has changed since
+it last wrote there. Every control block (10 ms) the budget is split between
+A and B by how much each has pending (tilted by Bias, more or less
+winner-take-all by Sharpness, held by Hold, unused budget banked by Savings),
+and each side writes its most-changed chunks into the shared buffer.
+A write by B covers A's audio, and A only takes that ground back once A
+changes there. A silent or unchanging input claims nothing.
+What you hear is the buffer.
+
+All parameters are per-block arrays so they can be automated.
+"""
+import numpy as np
+
+BLOCK_MS = 10.0
+SNAP_EVERY = 5          # territory snapshot every 5 blocks (50 ms)
+SNAP_BINS = 240         # resolution of the territory strip
+EPS = 1e-6              # errors below this count as "nothing to fix"
+
+
+def db_to_lin(db):
+    return 10.0 ** (np.asarray(db, dtype=np.float64) / 20.0)
+
+
+def soft_limit(x, knee=0.8):
+    a = np.abs(x)
+    over = a > knee
+    if not np.any(over):
+        return x
+    y = x.copy()
+    head = 1.0 - knee
+    y[over] = np.sign(x[over]) * (knee + head * np.tanh((a[over] - knee) / head))
+    return y
+
+
+def quantize(x, bits):
+    levels = float(2 ** (int(bits) - 1) - 1)
+    levels = max(levels, 1.0)
+    return np.round(np.clip(x, -1.0, 1.0) * levels) / levels
+
+
+def split_share(claim_a, claim_b, w_a, w_b, sharp):
+    """Fraction of the budget that goes to A."""
+    ca, cb = claim_a * w_a, claim_b * w_b
+    if ca <= 0 and cb <= 0:
+        tot = w_a + w_b
+        return 0.5 if tot <= 0 else w_a / tot
+    if cb <= 0:
+        return 1.0
+    if ca <= 0:
+        return 0.0
+    if sharp >= 0.999:
+        return 1.0 if ca > cb else (0.0 if cb > ca else 0.5)
+    k = 1.0 / (1.0 - sharp)
+    # 1 / (1 + (cb/ca)^k), computed in log space so it can't overflow
+    z = k * (np.log(cb) - np.log(ca))
+    if z > 50:
+        return 0.0
+    if z < -50:
+        return 1.0
+    return float(1.0 / (1.0 + np.exp(z)))
+
+
+class BrawlFX:
+    """
+    Stateful processor. Call step(n_blocks) until it returns True, then read
+    self.out (channels x samples) and the stats arrays.
+
+    a, b:   float arrays (channels x samples), same sample rate and shape
+    params: dict of per-block arrays (scalars are broadcast), see PARAM_NAMES
+    """
+
+    PARAM_NAMES = ("budget_kbs", "bias", "sharpness", "hold_ms", "savings_ms",
+                   "loop_ms", "chunk", "smooth", "memory", "bits", "randomness",
+                   "b_trim_db", "mix", "out_gain_db")
+
+    def __init__(self, a, b, sr, params, seed=1, block_ms=BLOCK_MS):
+        self.a = np.atleast_2d(np.asarray(a, dtype=np.float32))
+        self.bsig = np.atleast_2d(np.asarray(b, dtype=np.float32))
+        assert self.a.shape == self.bsig.shape, "A and B must have the same shape"
+        self.ch, self.n = self.a.shape
+        self.sr = int(sr)
+        self.block = max(16, int(round(self.sr * block_ms / 1000.0)))
+        self.n_blocks = int(np.ceil(self.n / self.block))
+        self.params = {}
+        for k in self.PARAM_NAMES:
+            arr = np.asarray(params[k], dtype=np.float64).ravel()
+            if arr.size == 1:
+                arr = np.full(self.n_blocks, arr[0])
+            if arr.size < self.n_blocks:
+                arr = np.concatenate([arr, np.full(self.n_blocks - arr.size, arr[-1])])
+            self.params[k] = arr
+        self.rng = np.random.default_rng(int(seed))
+        self.out = np.zeros((self.ch, self.n), dtype=np.float32)
+
+        # loop state
+        self.L = None
+        self.tA = self.tB = self.buf = None
+        self.owner = None        # 0 = never written, 1 = A, 2 = B (int8, length L)
+        self.last = None         # block index of last write (int32, length L)
+        self.pos = 0
+        self.last_out = np.zeros(self.ch)
+        self.declick = False
+
+        # fight state
+        self.bank = [0.0, 0.0]   # banked budget, in channel-samples
+        self.leader = 0          # 0 = none yet, 1 = A, 2 = B
+        self.hold_left = 0.0     # ms
+
+        # stats for the UI
+        self.share_a = np.full(self.n_blocks, 0.5, dtype=np.float32)   # actual spend split
+        self.snaps = []          # list of (pos_frac, own, fresh, amp) per SNAP_EVERY blocks
+        self.bi = 0
+
+    # ---- loop buffer -------------------------------------------------------
+    def _resize(self, new_L):
+        if self.L is None:
+            self.L = new_L
+            z = lambda: np.zeros((self.ch, new_L))
+            self.tA, self.tB, self.buf = z(), z(), z()
+            self.mA, self.mB = z(), z()
+            self.dA, self.dB = np.zeros(new_L), np.zeros(new_L)
+            self.chunk = None
+            self.owner = np.zeros(new_L, dtype=np.int8)
+            self.last = np.full(new_L, -10**6, dtype=np.int64)
+            self.pos = 0
+            return
+        old_L = self.L
+        src = np.linspace(0, old_L, new_L, endpoint=False)
+        idx = np.arange(old_L + 1)
+
+        def stretch(x):
+            ext = np.concatenate([x, x[:, :1]], axis=1)
+            return np.stack([np.interp(src, idx, ext[c]) for c in range(self.ch)])
+
+        near = np.minimum((src).astype(np.int64), old_L - 1)
+        self.tA, self.tB, self.buf = stretch(self.tA), stretch(self.tB), stretch(self.buf)
+        self.mA, self.mB = stretch(self.mA), stretch(self.mB)
+        self.dA = np.abs(self.tA - self.mA).sum(axis=0)
+        self.dB = np.abs(self.tB - self.mB).sum(axis=0)
+        self.chunk = None
+        self.owner = self.owner[near]
+        self.last = self.last[near]
+        self.pos = int(self.pos * new_L / old_L) % new_L
+        self.L = new_L
+        self.declick = True
+
+    # ---- choosing chunks ---------------------------------------------------
+    def _pick(self, err, avail, cost, taken, r):
+        """Pick up to avail//cost chunks with the largest error. Returns indices, spent."""
+        k = int(avail // cost)
+        if k <= 0:
+            return np.empty(0, dtype=np.int64), 0.0
+        cand = np.flatnonzero(err > EPS)
+        if taken is not None and cand.size:
+            cand = cand[~taken[cand]]
+        nc = cand.size
+        if nc == 0:
+            return np.empty(0, dtype=np.int64), 0.0
+        k = min(k, nc)
+        if k == nc:
+            return cand, k * cost
+        e = err[cand]
+        score = e / (e.max() + 1e-12)
+        if r > 0:
+            score = (1.0 - r) * score + r * self.rng.random(nc)
+        pick = cand[np.argpartition(score, -k)[-k:]]
+        return pick, k * cost
+
+    def _set_d(self, side, cols):
+        """Recompute a side's pending change at `cols` and keep chunk sums in step."""
+        t, mdl, d, s = (self.tA, self.mA, self.dA, self.sA) if side == 1 else \
+                       (self.tB, self.mB, self.dB, self.sB)
+        new = np.abs(t[:, cols] - mdl[:, cols]).sum(axis=0)
+        np.add.at(s, cols // self.chunk, new - d[cols])
+        d[cols] = new
+
+    def _write(self, chunks, chunk, h, side, b):
+        if chunks.size == 0:
+            return
+        L = self.L
+        target, model = (self.tA, self.mA) if side == 1 else (self.tB, self.mB)
+        if h == 0:
+            cols = (chunks[:, None] * chunk + np.arange(chunk)[None, :]).ravel()
+            cols = cols[cols < L]
+            self.buf[:, cols] = target[:, cols]
+            model[:, cols] = target[:, cols]
+            self._set_d(side, cols)
+            self.owner[cols] = side
+            self.last[cols] = b
+            return
+        ramp = (np.arange(h) + 0.5) / h
+        win = np.concatenate([ramp, np.ones(chunk), ramp[::-1]])
+        off = np.arange(win.size) - h
+        starts = chunks * chunk
+        cols = (starts[:, None] + off[None, :])
+        # the last chunk may be shorter than `chunk`; keep its window inside it
+        valid = (cols - starts[:, None]) < np.minimum(chunk, L - starts)[:, None] + h
+        cols = cols % L
+        w = np.broadcast_to(win, cols.shape)[valid]
+        cols = cols[valid]
+        W = np.zeros(L)
+        np.maximum.at(W, cols, w)
+        nz = np.flatnonzero(W)
+        Wn = W[nz]
+        self.buf[:, nz] += Wn[None, :] * (target[:, nz] - self.buf[:, nz])
+        # the side counts its whole crossfaded window as written, so the fade
+        # edges don't leave tiny leftovers that keep claiming budget forever
+        model[:, nz] = target[:, nz]
+        self._set_d(side, nz)
+        strong = nz[Wn >= 0.5]
+        self.owner[strong] = side
+        self.last[strong] = b
+
+    # ---- one block ---------------------------------------------------------
+    def _process_block(self, b):
+        p = {k: v[b] for k, v in self.params.items()}
+        s0 = b * self.block
+        s1 = min(self.n, s0 + self.block)
+        m = s1 - s0
+        block_s = m / self.sr
+
+        new_L = max(8, int(round(p["loop_ms"] * self.sr / 1000.0)))
+        if self.L is None or abs(new_L - self.L) > max(1, 0.01 * self.L):
+            self._resize(new_L)
+        L = self.L
+
+        bits = int(np.clip(round(p["bits"]), 2, 16))
+        dryA = self.a[:, s0:s1].astype(np.float64)
+        dryB = self.bsig[:, s0:s1] * db_to_lin(p["b_trim_db"])
+
+        # 1) per-chunk pending-change sums (rebuilt only when the chunk size changes)
+        chunk = int(np.clip(round(p["chunk"]), 1, L))
+        n_chunks = int(np.ceil(L / chunk))
+        if chunk != self.chunk:
+            self.chunk = chunk
+            pad = n_chunks * chunk - L
+
+            def sums(d):
+                e = np.concatenate([d, np.zeros(pad)]) if pad else d
+                return e.reshape(n_chunks, chunk).sum(axis=1)
+
+            self.sA, self.sB = sums(self.dA), sums(self.dB)
+
+        # 2) both inputs write their own target at the positions playing now
+        positions = (self.pos + np.arange(m)) % L
+        self.tA[:, positions] = quantize(dryA, bits)
+        self.tB[:, positions] = quantize(dryB, bits)
+        self._set_d(1, positions)
+        self._set_d(2, positions)
+
+        # chunk means (the last chunk may be short; that only slightly favours it)
+        eA = np.maximum(self.sA, 0.0) / chunk
+        eB = np.maximum(self.sB, 0.0) / chunk
+
+        # 3) split the budget
+        bias = float(np.clip(p["bias"], -1.0, 1.0))         # -1 = all A, +1 = all B
+        wA, wB = (1.0 - bias) / 2.0, (1.0 + bias) / 2.0
+        sharp = float(np.clip(p["sharpness"], 0.0, 1.0))
+        share = split_share(eA.sum(), eB.sum(), wA, wB, sharp)
+
+        raw_leader = 1 if share > 0.5 else (2 if share < 0.5 else self.leader)
+        hold_ms = max(0.0, float(p["hold_ms"]))
+        if self.leader == 0 or (raw_leader != self.leader and self.hold_left <= 0):
+            if raw_leader != self.leader:
+                self.leader = raw_leader
+                self.hold_left = hold_ms
+        elif raw_leader != self.leader and self.hold_left > 0:
+            # the current leader keeps the bigger part while its hold lasts
+            share = 1.0 - share
+        self.hold_left -= block_s * 1000.0
+
+        bytes_ps = bits / 8.0
+        allowance = max(0.0, p["budget_kbs"]) * 1000.0 * block_s / bytes_ps  # channel-samples
+        cost = chunk * self.ch
+        # Savings: an idle side (nothing changed) keeps earning its fair share
+        # (set by Bias) into its bank instead of handing it to the other side
+        sav_s = max(0.0, float(p["savings_ms"])) / 1000.0
+        cap = max(cost, sav_s * max(0.0, p["budget_kbs"]) * 1000.0 / bytes_ps)
+        keep = [0.0, 0.0]
+        if sav_s > 0:
+            if not np.any(eA > EPS):
+                keep[0] = wA * allowance
+            if not np.any(eB > EPS):
+                keep[1] = wB * allowance
+        rest = allowance - keep[0] - keep[1]
+        avail = [share * rest + keep[0] + self.bank[0],
+                 (1.0 - share) * rest + keep[1] + self.bank[1]]
+
+        r = float(np.clip(p["randomness"], 0.0, 1.0))
+        pA, spA = self._pick(eA, avail[0], cost, None, r)
+        pB, spB = self._pick(eB, avail[1], cost, None, r)
+        left = [avail[0] - spA, avail[1] - spB]
+
+        # 4) each side may keep up to `cap` for later; anything above goes to the other side
+        over = [max(0.0, left[0] - cap), max(0.0, left[1] - cap)]
+        left = [left[0] - over[0], left[1] - over[1]]
+        if over[1] > 0:
+            takenA = np.zeros(n_chunks, dtype=bool); takenA[pA] = True
+            extra, sp = self._pick(eA, over[1] + left[0], cost, takenA, r)
+            pA = np.concatenate([pA, extra]); spA += sp
+            left[0] = left[0] + over[1] - sp
+        if over[0] > 0:
+            takenB = np.zeros(n_chunks, dtype=bool); takenB[pB] = True
+            extra, sp = self._pick(eB, over[0] + left[1], cost, takenB, r)
+            pB = np.concatenate([pB, extra]); spB += sp
+            left[1] = left[1] + over[0] - sp
+        self.bank = [min(left[0], cap), min(left[1], cap)]
+
+        # 5) write: the leader writes last, so it wins chunks both sides picked
+        h = int(round(np.clip(p["smooth"], 0.0, 1.0) * chunk / 2)) if chunk >= 4 else 0
+        order = [(pB, 2), (pA, 1)] if self.leader == 1 else [(pA, 1), (pB, 2)]
+        for picks, side in order:
+            self._write(picks, chunk, h, side, b)
+
+        tot = spA + spB
+        self.share_a[b] = (spA / tot) if tot > 0 else (self.share_a[b - 1] if b else 0.5)
+
+        # 6) play, then let what was just played fade (Memory = what's left after 1 s)
+        wet = self.buf[:, positions].copy()
+        if self.declick:
+            offset = self.last_out - wet[:, 0]
+            ramp = np.clip(1.0 - np.arange(m) / min(m, max(1, int(0.004 * self.sr))), 0, 1)
+            wet += offset[:, None] * ramp[None, :]
+            self.declick = False
+        mem = float(np.clip(p["memory"], 0.0, 1.0))
+        if mem < 1.0:
+            g = mem ** (L / self.sr) if mem > 0 else 0.0
+            self.buf[:, positions] *= g
+
+        if b % SNAP_EVERY == 0:
+            self._snapshot(b)
+
+        self.pos = (self.pos + m) % L
+        mix = float(np.clip(p["mix"], 0.0, 1.0))
+        y = (1.0 - mix) * (dryA + dryB) + mix * wet
+        y *= db_to_lin(p["out_gain_db"])
+        self.out[:, s0:s1] = soft_limit(y)
+        self.last_out = wet[:, -1]
+
+    def _snapshot(self, b):
+        L = self.L
+        edges = (np.arange(SNAP_BINS) * L) // SNAP_BINS
+        edges = np.unique(edges)
+        amp = np.maximum.reduceat(np.abs(self.buf).max(axis=0), edges)
+        a_cnt = np.add.reduceat((self.owner == 1).astype(np.int32), edges)
+        b_cnt = np.add.reduceat((self.owner == 2).astype(np.int32), edges)
+        age_s = (b - self.last) * self.block / self.sr
+        fresh = np.add.reduceat(np.clip(1.0 - age_s, 0.0, 1.0), edges)
+        sizes = np.diff(np.append(edges, L))
+        fresh = fresh / sizes
+        own = np.where((a_cnt == 0) & (b_cnt == 0), 0, np.where(a_cnt >= b_cnt, 1, 2))
+        if edges.size < SNAP_BINS:  # tiny loops: stretch to the full width
+            sel = np.minimum((np.arange(SNAP_BINS) * edges.size) // SNAP_BINS, edges.size - 1)
+            amp, own, fresh = amp[sel], own[sel], fresh[sel]
+        self.snaps.append((
+            self.pos / L,
+            own.astype(np.uint8),
+            np.round(np.clip(fresh, 0, 1) * 255).astype(np.uint8),
+            np.round(np.clip(amp, 0, 1) * 255).astype(np.uint8),
+        ))
+
+    # ---- driving -----------------------------------------------------------
+    def step(self, n_blocks=200):
+        end = min(self.n_blocks, self.bi + n_blocks)
+        while self.bi < end:
+            self._process_block(self.bi)
+            self.bi += 1
+        return self.bi >= self.n_blocks
+
+    @property
+    def progress(self):
+        return self.bi / max(1, self.n_blocks)
+
+    def render(self):
+        while not self.step(1000):
+            pass
+        return self.out
+
+    def snap_arrays(self):
+        """Territory snapshots packed as flat uint8 arrays for the browser."""
+        n = len(self.snaps)
+        pos = np.array([s[0] for s in self.snaps], dtype=np.float32)
+        own = np.concatenate([s[1] for s in self.snaps]) if n else np.zeros(0, np.uint8)
+        fresh = np.concatenate([s[2] for s in self.snaps]) if n else np.zeros(0, np.uint8)
+        amp = np.concatenate([s[3] for s in self.snaps]) if n else np.zeros(0, np.uint8)
+        return pos, own, fresh, amp
+
+
+def process(a, b, sr, params, seed=1):
+    return BrawlFX(a, b, sr, params, seed).render()
+
+</script>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script>
+"use strict";
+const SNAP_EVERY = 5, BLOCK_MS = 10;   // must match the Python
+const $ = id => document.getElementById(id);
+
+// ---------- tempo-synced value lists (in beats, 4/4) ----------
+const LOOP_NOTES = [["1/64",1/16],["1/32T",1/12],["1/32",1/8],["1/16T",1/6],["1/16",1/4],["1/8T",1/3],["1/8",1/2],["1/4T",2/3],
+  ["1/4",1],["1/2",2],["1 bar",4],["2 bars",8],["4 bars",16]];
+const HOLD_NOTES = [["off",0],["1/64",1/16],["1/32",1/8],["1/16T",1/6],["1/16",1/4],["1/8T",1/3],["1/8",1/2],["1/4",1],["1/2",2],["1 bar",4]];
+
+// ---------- parameters ----------
+const PARAMS = [
+  {id:"budget_kbs", g:"fight", label:"Budget", min:0.5, max:1000, def:24, scale:"log", c:"blue", fmt:v=>(v<10?v.toFixed(1):Math.round(v))+" kB/s"},
+  {id:"bias", g:"fight", label:"Bias", min:-1, max:1, def:0, scale:"lin", c:"bi", fmt:v=>{const a=Math.round((1-v)/2*100); return a===50?"even":`A ${a} : ${100-a} B`;}},
+  {id:"sharpness", g:"fight", label:"Sharpness", min:0, max:1, def:0.5, scale:"lin", c:"red", fmt:v=>v<=0.005?"soft":v>=0.995?"hard":Math.round(v*100)+"%"},
+  {id:"hold_ms", g:"fight", label:"Hold", min:0, max:1000, def:0, scale:"pow", c:"blue", sync:"syncHold", notes:HOLD_NOTES, fmt:v=>v<0.5?"off":Math.round(v)+" ms"},
+  {id:"savings_ms", g:"fight", label:"Savings", min:0, max:2000, def:0, scale:"pow", c:"red", fmt:v=>v<0.5?"off":Math.round(v)+" ms"},
+  {id:"loop_ms", g:"buffer", label:"Loop", min:1, max:4000, def:250, scale:"log", c:"blue", sm:1, sync:"syncLoop", notes:LOOP_NOTES, fmt:v=>v<10?v.toFixed(1)+" ms":Math.round(v)+" ms"},
+  {id:"chunk", g:"buffer", label:"Chunk", min:1, max:4096, def:64, scale:"log", int:1, c:"red", sm:1, fmt:v=>Math.round(v)+" smp"},
+  {id:"smooth", g:"buffer", label:"Smoothing", min:0, max:1, def:0.5, scale:"lin", c:"blue", sm:1, fmt:v=>Math.round(v*100)+"%"},
+  {id:"memory", g:"buffer", label:"Memory", min:0, max:1, def:1, scale:"lin", c:"red", sm:1, fmt:v=>Math.round(v*100)+"%"},
+  {id:"bits", g:"buffer", label:"Bits", min:2, max:16, def:16, scale:"lin", int:1, c:"blue", sm:1, fmt:v=>Math.round(v)+""},
+  {id:"randomness", g:"buffer", label:"Random", min:0, max:1, def:0, scale:"lin", c:"red", sm:1, fmt:v=>Math.round(v*100)+"%"},
+  {id:"b_trim_db", g:"io", label:"B Trim", min:-24, max:24, def:0, scale:"lin", c:"red", sm:1, fmt:v=>(v>0?"+":"")+v.toFixed(1)+" dB"},
+  {id:"mix", g:"io", label:"Mix", min:0, max:1, def:1, scale:"lin", c:"blue", sm:1, fmt:v=>Math.round(v*100)+"% wet"},
+  {id:"out_gain_db", g:"io", label:"Output", min:-24, max:12, def:0, scale:"lin", c:"graphite", sm:1, fmt:v=>(v>0?"+":"")+v.toFixed(1)+" dB"},
+];
+const P = Object.fromEntries(PARAMS.map(p => [p.id, p]));
+const DESC = {
+  budget_kbs:"Total bytes per second for both inputs together.",
+  bias:"Tilts the fight. Left favours A, right favours B.",
+  sharpness:"Soft: both move, unevenly. Hard: only the winner moves.",
+  hold_ms:"Once a side wins, it keeps the upper hand at least this long.",
+  savings_ms:"An idle side banks its fair share and spends it in a burst when it changes again.",
+  loop_ms:"Length of the shared loop buffer.",
+  chunk:"How many samples are written at a time. Small = fizz, large = fragments.",
+  smooth:"Crossfade where a written chunk meets the audio around it.",
+  memory:"How much unrefreshed audio is left after 1 second.",
+  bits:"Quantisation of written samples. Fewer bits = more samples fit in the budget.",
+  randomness:"0 = most-changed chunks first, 1 = random picks.",
+  b_trim_db:"Sidechain level. Louder B changes more, so it fights harder.",
+  mix:"Dry is A and B summed, wet is the buffer.",
+  out_gain_db:"After the mix, into a soft limiter.",
+};
+
+function toNorm(p, v){
+  if (p.scale === "log") return Math.log(v/p.min)/Math.log(p.max/p.min);
+  if (p.scale === "pow") return Math.cbrt((v - p.min)/(p.max - p.min));
+  return (v - p.min)/(p.max - p.min);
+}
+function fromNorm(p, n){
+  n = Math.min(1, Math.max(0, n));
+  let v = p.scale === "log" ? p.min*Math.pow(p.max/p.min, n) : p.scale === "pow" ? p.min + n*n*n*(p.max - p.min) : p.min + n*(p.max - p.min);
+  if (p.int) v = Math.round(v);
+  return v;
+}
+const synced = p => p.sync && $(p.sync).checked;
+const noteIndex = (p, n) => Math.min(p.notes.length - 1, Math.max(0, Math.round(n*(p.notes.length - 1))));
+function bpm(){ const b = parseFloat($("bpm").value); return b > 0 ? b : 120; }
+// knob position (0..1) -> engine value
+function valueOf(p, n){
+  if (synced(p)) return p.notes[noteIndex(p, n)][1] * 60000 / bpm();
+  return fromNorm(p, n);
+}
+function label(p, n){
+  if (synced(p)) return p.notes[noteIndex(p, n)][0];
+  return p.fmt(fromNorm(p, n));
+}
+
+// ---------- state (knobs and automation stored as 0..1 positions) ----------
+const state = {
+  knobs: Object.fromEntries(PARAMS.map(p => [p.id, toNorm(p, p.def)])),
+  auto: Object.fromEntries(PARAMS.map(p => [p.id, []])),
+  lane: "budget_kbs",
+};
+let undoStack = [], redoStack = [];
+
+// ---------- Python ----------
+let pyodide = null;
+const pyReady = (async () => {
+  const st = $("pystatus");
+  try {
+    pyodide = await loadPyodide();
+    st.textContent = "loading numpy…";
+    await pyodide.loadPackage("numpy");
+    pyodide.runPython($("pysrc").textContent);
+    st.textContent = "Python ready"; st.className = "status ok";
+    updateButtons();
+  } catch (e) {
+    st.textContent = "Python failed to load (are you online?): " + e.message; st.className = "status err";
+    throw e;
+  }
+})();
+
+// ---------- knobs ----------
+function ringBg(p, n){
+  const grey = "#b9b9c0";
+  if (p.c === "bi"){
+    const a = Math.min(n, .5)*270, b = Math.max(n, .5)*270;
+    const col = n < .5 ? "var(--blue)" : "var(--red)";
+    return `conic-gradient(from 225deg, ${grey} 0 ${a}deg, ${col} ${a}deg ${b}deg, ${grey} ${b}deg 270deg, transparent 270deg)`;
+  }
+  const col = `var(--${p.c})`, d = n*270;
+  return `conic-gradient(from 225deg, ${col} 0 ${d}deg, ${grey} ${d}deg 270deg, transparent 270deg)`;
+}
+PARAMS.forEach(p => {
+  const k = document.createElement("div");
+  k.className = "knob" + (p.sm ? " sm" : ""); k.id = "k_" + p.id;
+  k.title = DESC[p.id];
+  k.innerHTML = `<span class="auto">AUTO</span><div class="dial" tabindex="0" role="slider" aria-label="${p.label}"><div class="cap"></div></div>
+    <span class="name">${p.label}</span><span class="val"></span>`;
+  $("g_" + p.g).appendChild(k);
+  const dial = k.querySelector(".dial");
+  let drag = null;
+  dial.addEventListener("pointerdown", e => { dial.focus(); dial.setPointerCapture(e.pointerId); drag = {y:e.clientY, n:state.knobs[p.id]}; e.preventDefault(); });
+  dial.addEventListener("pointermove", e => {
+    if (!drag) return;
+    const sens = e.shiftKey ? 1/900 : 1/180;
+    setKnob(p.id, drag.n + (drag.y - e.clientY)*sens);
+  });
+  dial.addEventListener("pointerup", () => drag = null);
+  dial.addEventListener("pointercancel", () => drag = null);
+  dial.addEventListener("dblclick", () => setKnob(p.id, toNorm(p, p.def)));
+  dial.addEventListener("wheel", e => { e.preventDefault(); setKnob(p.id, state.knobs[p.id] - Math.sign(e.deltaY)*(e.shiftKey ? .004 : .02)); }, {passive:false});
+  dial.addEventListener("keydown", e => {
+    const d = e.shiftKey ? .004 : .02;
+    if (e.key === "ArrowUp" || e.key === "ArrowRight"){ setKnob(p.id, state.knobs[p.id] + d); e.preventDefault(); }
+    if (e.key === "ArrowDown" || e.key === "ArrowLeft"){ setKnob(p.id, state.knobs[p.id] - d); e.preventDefault(); }
+  });
+  k.querySelector(".name").addEventListener("click", () => selectLane(p.id));
+  const o = document.createElement("option"); o.value = p.id; o.textContent = p.label; $("lane").appendChild(o);
+});
+function setKnob(id, n){
+  const p = P[id];
+  n = Math.min(1, Math.max(0, n));
+  if (p.int && !synced(p)) n = toNorm(p, fromNorm(p, n));
+  state.knobs[id] = n; refreshKnobs(); markStale();
+}
+function refreshKnobs(){
+  PARAMS.forEach(p => {
+    const k = $("k_" + p.id), n = state.knobs[p.id], dial = k.querySelector(".dial");
+    dial.style.setProperty("--v", n);
+    dial.style.background = ringBg(p, n);
+    dial.setAttribute("aria-valuetext", label(p, n));
+    k.querySelector(".val").textContent = label(p, n);
+    k.classList.toggle("automated", state.auto[p.id].length > 0);
+    k.classList.toggle("sel", state.lane === p.id);
+  });
+  [...$("lane").options].forEach(o => o.textContent = P[o.value].label + (state.auto[o.value].length ? " ●" : ""));
+}
+$("lane").addEventListener("change", () => selectLane($("lane").value));
+function selectLane(id){ state.lane = id; $("lane").value = id; refreshKnobs(); drawWave(); }
+["syncLoop","syncHold"].forEach(id => $(id).addEventListener("change", () => { refreshKnobs(); drawWave(); markStale(); }));
+$("bpm").addEventListener("input", markStale);
+$("seed").addEventListener("input", markStale);
+$("resetKnobs").onclick = () => { PARAMS.forEach(p => state.knobs[p.id] = toNorm(p, p.def)); refreshKnobs(); markStale(); };
+
+// ---------- automation ----------
+function evalLane(pts, t){
+  if (!pts.length) return null;
+  if (t <= pts[0].t) return pts[0].v;
+  for (let i = 1; i < pts.length; i++){
+    if (t <= pts[i].t){
+      const a = pts[i-1], b = pts[i], f = (b.t - a.t) < 1e-9 ? 1 : (t - a.t)/(b.t - a.t);
+      return a.v + f*(b.v - a.v);
+    }
+  }
+  return pts[pts.length-1].v;
+}
+const snapshot = () => JSON.stringify(state.auto);
+function pushUndo(s){ undoStack.push(s); if (undoStack.length > 200) undoStack.shift(); redoStack = []; updateButtons(); }
+function restore(s){ state.auto = JSON.parse(s); refreshKnobs(); drawWave(); markStale(); updateButtons(); }
+function undo(){ if (!undoStack.length) return; redoStack.push(snapshot()); restore(undoStack.pop()); }
+function redo(){ if (!redoStack.length) return; undoStack.push(snapshot()); restore(redoStack.pop()); }
+$("undo").onclick = undo; $("redo").onclick = redo;
+$("clearLane").onclick = () => { if (!state.auto[state.lane].length) return; pushUndo(snapshot()); state.auto[state.lane] = []; refreshKnobs(); drawWave(); markStale(); };
+let armT = null;
+$("clearAll").onclick = () => {
+  const b = $("clearAll");
+  if (!b.classList.contains("armed")){ b.classList.add("armed"); b.textContent = "Sure? Click again"; armT = setTimeout(disarm, 3000); return; }
+  disarm();
+  if (!PARAMS.some(p => state.auto[p.id].length)) return;
+  pushUndo(snapshot()); PARAMS.forEach(p => state.auto[p.id] = []); refreshKnobs(); drawWave(); markStale();
+};
+function disarm(){ clearTimeout(armT); $("clearAll").classList.remove("armed"); $("clearAll").textContent = "Clear all"; }
+
+// ---------- audio files ----------
+let audioCtx = null, bufA = null, bufB = null, outBuf = null, nameA = "audio", nameB = "";
+let renderedSig = null, shareA = null, snaps = null, peaks = null, outPeaks = null;
+function ctx(){ if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); return audioCtx; }
+function setupDrop(which){
+  const drop = $("drop" + which), input = $("file" + which);
+  drop.addEventListener("click", e => { if (e.target.tagName !== "BUTTON") input.click(); });
+  drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+  drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); if (e.dataTransfer.files[0]) loadFile(which, e.dataTransfer.files[0]); });
+  input.addEventListener("change", () => { if (input.files[0]) loadFile(which, input.files[0]); input.value = ""; });
+}
+setupDrop("A"); setupDrop("B");
+$("clearB").onclick = () => { stop(); bufB = null; nameB = ""; $("infoB").textContent = "Drop a WAV or MP3, or click to choose"; $("dropB").classList.remove("loaded"); $("clearB").hidden = true; inputsChanged(); };
+function fmtTime(s){ const m = Math.floor(s/60); return m + ":" + (s - m*60).toFixed(1).padStart(4, "0"); }
+function esc(s){ return s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+async function loadFile(which, f){
+  stop();
+  const info = $("info" + which);
+  info.textContent = "Decoding " + f.name + "…";
+  let buf;
+  try { buf = await ctx().decodeAudioData(await f.arrayBuffer()); }
+  catch (e) { info.textContent = "Couldn't decode " + f.name + ". Try a WAV or MP3."; return; }
+  if (which === "A"){ bufA = buf; nameA = f.name.replace(/\.[^.]+$/, ""); } else { bufB = buf; nameB = f.name; $("clearB").hidden = false; }
+  info.innerHTML = `<b>${esc(f.name)}</b> · ${buf.numberOfChannels === 1 ? "mono" : "stereo"} · ${fmtTime(buf.duration)}`;
+  $("drop" + which).classList.add("loaded");
+  inputsChanged();
+}
+function inputsChanged(){
+  outBuf = null; shareA = null; snaps = null; outPeaks = null; renderedSig = null; playPos = 0;
+  peaks = null; setListen(bufB && !bufA ? "b" : listen === "out" ? "dry" : listen);
+  markStale(); resize(); updateButtons();
+}
+function totalLen(){ return Math.max(bufA ? bufA.length : 0, bufB ? bufB.length : 0); }
+function totalDur(){ const sr = (bufA || bufB) ? (bufA || bufB).sampleRate : 48000; return totalLen()/sr; }
+
+// ---------- render ----------
+function settingsSig(){ return JSON.stringify([state.knobs, state.auto, $("syncLoop").checked, $("syncHold").checked, $("bpm").value, $("seed").value, nameA, nameB, !!bufA, !!bufB]); }
+function markStale(){
+  const b = $("stale");
+  if (!bufA){ b.textContent = "load input A"; b.className = "pill"; return; }
+  if (!outBuf){ b.textContent = "not rendered"; b.className = "pill stale"; return; }
+  const stale = settingsSig() !== renderedSig;
+  b.textContent = stale ? "changed, re-render" : "up to date"; b.className = "pill" + (stale ? " stale" : "");
+}
+function chanData(buf, c, nch, n){
+  const out = new Float32Array(n);
+  if (buf){ const src = buf.getChannelData(Math.min(c, buf.numberOfChannels - 1)); out.set(src.subarray(0, Math.min(n, src.length))); }
+  return out;
+}
+let rendering = false;
+async function render(){
+  if (!bufA || rendering) return;
+  rendering = true; updateButtons();
+  const prog = $("prog"), bar = prog.firstElementChild;
+  prog.style.display = "block"; bar.style.width = "0%";
+  try {
+    await pyReady;
+    const sr = bufA.sampleRate, n = totalLen();
+    const nch = Math.max(bufA.numberOfChannels, bufB ? bufB.numberOfChannels : 1);
+    const block = Math.max(16, Math.round(sr*BLOCK_MS/1000));
+    const nBlocks = Math.ceil(n/block);
+    const params = {};
+    PARAMS.forEach(p => {
+      const arr = new Float64Array(nBlocks), pts = state.auto[p.id];
+      if (!pts.length) arr.fill(valueOf(p, state.knobs[p.id]));
+      else for (let b = 0; b < nBlocks; b++) arr[b] = valueOf(p, evalLane(pts, Math.min(1, (b + .5)*block/n)));
+      params[p.id] = arr;
+    });
+    const A = [], B = [];
+    for (let c = 0; c < nch; c++){ A.push(chanData(bufA, c, nch, n)); B.push(chanData(bufB, c, nch, n)); }
+    const g = pyodide.globals;
+    g.set("js_a", A); g.set("js_b", B); g.set("js_params", params); g.set("js_sr", sr);
+    g.set("js_seed", parseInt($("seed").value) || 0);
+    const sig = settingsSig();
+    pyodide.runPython(`
+import numpy as np
+_a = np.stack([np.asarray(x.to_py(), dtype=np.float32) for x in js_a])
+_b = np.stack([np.asarray(x.to_py(), dtype=np.float32) for x in js_b])
+_p = {k: np.asarray(getattr(js_params, k).to_py(), dtype=np.float64) for k in BrawlFX.PARAM_NAMES}
+fx = BrawlFX(_a, _b, js_sr, _p, seed=js_seed)
+del _a, _b, _p
+`);
+    ["js_a","js_b","js_params"].forEach(k => g.delete(k));
+    const step = g.get("fx").step;
+    let done = false;
+    while (!done){
+      done = step(60);
+      bar.style.width = (pyodide.runPython("fx.progress")*100).toFixed(1) + "%";
+      await new Promise(r => setTimeout(r, 0));
+    }
+    step.destroy();
+    const out = ctx().createBuffer(nch, n, sr);
+    const take = (expr, type) => { const px = pyodide.runPython(expr); const b = px.getBuffer(type); const d = b.data.slice(); b.release(); px.destroy(); return d; };
+    for (let c = 0; c < nch; c++) out.copyToChannel(take(`fx.out[${c}].astype(np.float32)`, "f32"), c);
+    shareA = take("fx.share_a", "f32");
+    pyodide.runPython("_sp = fx.snap_arrays()");
+    snaps = { pos: take("_sp[0]", "f32"), own: take("_sp[1]", "u8"), fresh: take("_sp[2]", "u8"), amp: take("_sp[3]", "u8"),
+              bins: 240, dt: SNAP_EVERY*block/sr, blockDt: block/sr };
+    pyodide.runPython("del fx, _sp");
+    const wasPlaying = playing, pos = currentPos();
+    if (wasPlaying) stop();
+    outBuf = out; renderedSig = sig; outPeaks = null; playPos = pos;
+    setListen("out");
+    if (wasPlaying) play();
+  } catch (e) {
+    console.error(e); $("pystatus").textContent = "Render failed: " + e.message; $("pystatus").className = "status err";
+  } finally {
+    rendering = false; prog.style.display = "none"; markStale(); updateButtons(); drawWave(); drawFight(); drawLive();
+  }
+}
+$("render").onclick = render;
+
+// ---------- playback: all sources run in sync, the listen switch only moves gains ----------
+let playing = false, playPos = 0, startT = 0, srcs = [], gains = {}, listen = "a";
+function currentPos(){ return playing ? Math.min(totalDur(), playPos + audioCtx.currentTime - startT) : playPos; }
+function gainFor(k){ return listen === k || (listen === "dry" && (k === "a" || k === "b")) ? 1 : 0; }
+function play(){
+  if (!bufA && !bufB) return;
+  ctx().resume();
+  if (playPos >= totalDur() - 0.01) playPos = 0;
+  const t = audioCtx.currentTime + 0.03;
+  srcs = []; gains = {};
+  [["a", bufA], ["b", bufB], ["out", outBuf]].forEach(([k, buf]) => {
+    if (!buf) return;
+    const g = audioCtx.createGain(); g.gain.value = gainFor(k); g.connect(audioCtx.destination);
+    const s = audioCtx.createBufferSource(); s.buffer = buf; s.connect(g);
+    if (playPos < buf.duration) s.start(t, playPos);
+    srcs.push(s); gains[k] = g;
+  });
+  startT = t; playing = true; updateButtons(); tick();
+}
+function stop(){
+  if (!playing) return;
+  playPos = currentPos(); playing = false;
+  srcs.forEach(s => { try { s.stop(); } catch (e) {} });
+  srcs = []; updateButtons(); drawWave(); drawLive();
+}
+function setListen(v){
+  if (v === "out" && !outBuf) v = "dry";
+  listen = v;
+  document.querySelectorAll("#listen button").forEach(b => { b.classList.toggle("on", b.dataset.v === v); });
+  if (playing) Object.entries(gains).forEach(([k, g]) => g.gain.setTargetAtTime(gainFor(k), audioCtx.currentTime, 0.005));
+  updateButtons(); drawLive();
+}
+document.querySelectorAll("#listen button").forEach(b => b.onclick = () => setListen(b.dataset.v));
+function seek(sec){ const was = playing; stop(); playPos = Math.max(0, Math.min(totalDur(), sec)); if (was) play(); else { drawWave(); drawLive(); } }
+$("play").onclick = () => playing ? stop() : play();
+function tick(){
+  if (!playing) return;
+  if (currentPos() >= totalDur() - 0.005){ stop(); playPos = 0; drawWave(); drawLive(); return; }
+  drawWave(); drawLive();
+  requestAnimationFrame(tick);
+}
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+  if (e.code === "Space"){ e.preventDefault(); if (bufA || bufB) (playing ? stop() : play()); }
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z"){ e.preventDefault(); e.shiftKey ? redo() : undo(); }
+});
+
+// ---------- drawing ----------
+function fitCanvas(c){
+  const dpr = window.devicePixelRatio || 1, r = c.getBoundingClientRect();
+  c.width = Math.max(1, Math.round(r.width*dpr)); c.height = Math.max(1, Math.round(r.height*dpr));
+  return dpr;
+}
+function resize(){ ["wave","fight","ruler","strip"].forEach(id => fitCanvas($(id))); peaks = null; outPeaks = null; drawWave(); drawFight(); drawLive(); }
+window.addEventListener("resize", resize);
+function computePeaks(buf, W, n){
+  const out = new Float32Array(W);
+  if (!buf) return out;
+  const chs = []; for (let c = 0; c < buf.numberOfChannels; c++) chs.push(buf.getChannelData(c));
+  for (let x = 0; x < W; x++){
+    const s0 = Math.floor(x*n/W), s1 = Math.min(buf.length, Math.floor((x+1)*n/W));
+    let m = 0;
+    for (const d of chs) for (let i = s0; i < s1; i += 4){ const v = Math.abs(d[i]); if (v > m) m = v; }
+    out[x] = m;
+  }
+  return out;
+}
+function drawWave(){
+  const c = $("wave"), g = c.getContext("2d"), W = c.width, H = c.height;
+  g.clearRect(0, 0, W, H);
+  const n = totalLen();
+  if (!n){ g.fillStyle = "#9c9ca4"; g.font = `${12*(window.devicePixelRatio||1)}px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = "center"; g.fillText("Load input A (and B) above", W/2, H/2); return; }
+  if (!peaks) peaks = { a: computePeaks(bufA, W, n), b: computePeaks(bufB, W, n) };
+  const mid = H/2;
+  g.fillStyle = "rgba(0,157,220,.55)";
+  for (let x = 0; x < W; x++){ const h = peaks.a[x]*mid*.95; g.fillRect(x, mid - h, 1, h); }
+  g.fillStyle = "rgba(224,58,62,.55)";
+  for (let x = 0; x < W; x++){ const h = peaks.b[x]*mid*.95; g.fillRect(x, mid, 1, h); }
+  if (outBuf){
+    if (!outPeaks) outPeaks = computePeaks(outBuf, W, n);
+    g.fillStyle = "rgba(0,0,0,.55)";
+    for (let x = 0; x < W; x++){ const h = outPeaks[x]*mid*.95; g.fillRect(x, mid - h*.5, 1, h); }
+  }
+  g.fillStyle = "rgba(0,0,0,.25)"; g.fillRect(0, mid, W, 1);
+  // automation lane
+  const p = P[state.lane], pts = state.auto[state.lane], dpr = window.devicePixelRatio || 1;
+  const y = v => (1 - v)*(H - 16*dpr) + 8*dpr;
+  g.strokeStyle = "#000"; g.lineWidth = 2*dpr; g.setLineDash(pts.length ? [] : [5*dpr, 5*dpr]);
+  g.beginPath();
+  if (!pts.length){ g.moveTo(0, y(state.knobs[state.lane])); g.lineTo(W, y(state.knobs[state.lane])); }
+  else { g.moveTo(0, y(pts[0].v)); pts.forEach(q => g.lineTo(q.t*W, y(q.v))); g.lineTo(W, y(pts[pts.length-1].v)); }
+  g.stroke(); g.setLineDash([]);
+  pts.forEach((q, i) => {
+    g.fillStyle = i === hoverPt ? "#fff" : "#000"; g.strokeStyle = "#000"; g.lineWidth = 1.5*dpr;
+    g.beginPath(); g.arc(q.t*W, y(q.v), 4.5*dpr, 0, Math.PI*2); g.fill(); g.stroke();
+  });
+  g.font = `bold ${11*dpr}px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = "left"; g.fillStyle = "#000";
+  const hv = hoverPt >= 0 && pts[hoverPt] ? " · " + label(p, pts[hoverPt].v) : (!pts.length ? " · " + label(p, state.knobs[state.lane]) + " (knob)" : "");
+  g.fillText(p.label + hv, 8*dpr, 16*dpr);
+  // playhead
+  const px = currentPos()/totalDur()*W;
+  g.fillStyle = "#000"; g.fillRect(px - dpr/2, 0, Math.max(1, dpr), H);
+  drawRuler();
+}
+function drawFight(){
+  const c = $("fight"), g = c.getContext("2d"), W = c.width, H = c.height;
+  g.fillStyle = "#2a2a30"; g.fillRect(0, 0, W, H);
+  if (!shareA) return;
+  const nb = shareA.length;
+  for (let x = 0; x < W; x++){
+    const b0 = Math.floor(x*nb/W), b1 = Math.max(b0 + 1, Math.floor((x+1)*nb/W));
+    let s = 0; for (let b = b0; b < b1; b++) s += shareA[b];
+    const a = s/(b1 - b0);
+    g.fillStyle = "#009ddc"; g.fillRect(x, 0, 1, H*a);
+    g.fillStyle = "#e03a3e"; g.fillRect(x, H*a, 1, H - H*a);
+  }
+}
+function drawRuler(){
+  const c = $("ruler"), g = c.getContext("2d"), W = c.width, H = c.height, dpr = window.devicePixelRatio || 1;
+  g.clearRect(0, 0, W, H);
+  const d = totalDur(); if (!d) return;
+  const step = [0.5,1,2,5,10,15,30,60,120][[0.5,1,2,5,10,15,30,60,120].findIndex(s => W/(d/s) > 60*dpr)] || 300;
+  g.fillStyle = "#4a4a52"; g.font = `${10*dpr}px ${getComputedStyle(document.body).fontFamily}`;
+  for (let s = 0; s <= d; s += step){ const x = s/d*W; g.fillRect(x, 0, 1, 5*dpr); g.fillText(fmtTime(s).replace(/\.0$/, ""), x + 3*dpr, 14*dpr); }
+  const px = currentPos()/d*W;
+  g.fillStyle = "#000"; g.beginPath(); g.moveTo(px - 5*dpr, 0); g.lineTo(px + 5*dpr, 0); g.lineTo(px, 7*dpr); g.fill();
+  $("time").textContent = fmtTime(currentPos()) + " / " + fmtTime(d);
+}
+function drawLive(){
+  const c = $("strip"), g = c.getContext("2d"), W = c.width, H = c.height, dpr = window.devicePixelRatio || 1;
+  g.fillStyle = "#0b0b0e"; g.fillRect(0, 0, W, H);
+  const meter = $("meter");
+  if (!snaps || !snaps.pos.length){
+    g.fillStyle = "#55555c"; g.font = `${12*dpr}px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = "center";
+    g.fillText(bufA ? "Render to see who holds the loop" : "Load input A to start", W/2, H/2 + 4*dpr);
+    meter.classList.add("idle"); $("tugA").textContent = "A –"; $("tugB").textContent = "– B"; $("terrRead").textContent = "render to see the fight";
+    return;
+  }
+  const t = currentPos();
+  const si = Math.min(snaps.pos.length - 1, Math.max(0, Math.floor(t/snaps.dt)));
+  const N = snaps.bins, o = si*N, bw = W/N, mid = H/2;
+  let ca = 0, cb = 0;
+  for (let i = 0; i < N; i++){
+    const own = snaps.own[o+i], fr = snaps.fresh[o+i]/255, amp = snaps.amp[o+i]/255;
+    const base = own === 1 ? [0,157,220] : own === 2 ? [224,58,62] : [85,85,92];
+    const k = own ? 0.85*(1 - fr) : 0;
+    const col = base.map((v, j) => Math.round(v + ([85,85,92][j] - v)*k));
+    if (own === 1) ca++; else if (own === 2) cb++;
+    g.fillStyle = `rgb(${col})`;
+    const h = Math.max(dpr, Math.sqrt(amp)*H*0.46);
+    g.fillRect(Math.floor(i*bw), mid - h, Math.max(1, Math.ceil(bw) - 1), h*2);
+  }
+  g.fillStyle = "rgba(255,255,255,.08)"; g.fillRect(0, mid, W, 1);
+  const px = Math.floor(snaps.pos[si]*W);
+  g.shadowColor = "#fff"; g.shadowBlur = 8*dpr; g.fillStyle = "#fff"; g.fillRect(px, 0, 2*dpr, H); g.shadowBlur = 0;
+  $("terrRead").innerHTML = `A holds <b>${Math.round(ca/N*100)}%</b> · B holds <b>${Math.round(cb/N*100)}%</b> · unclaimed <b>${Math.round((N-ca-cb)/N*100)}%</b>`;
+  // budget split, averaged over ~100 ms
+  const bi = Math.floor(t/snaps.blockDt), b0 = Math.max(0, bi - 5), b1 = Math.min(shareA.length, bi + 5);
+  let s = 0; for (let b = b0; b < b1; b++) s += shareA[b];
+  const a = b1 > b0 ? s/(b1 - b0) : .5;
+  meter.classList.remove("idle");
+  $("fa").style.width = (a*100) + "%"; $("fb").style.width = ((1 - a)*100) + "%";
+  $("tugA").textContent = "A " + Math.round(a*100) + "%"; $("tugB").textContent = Math.round((1 - a)*100) + "% B";
+}
+
+// ---------- automation editing on the waveform ----------
+let hoverPt = -1, dragPt = -1, dragSnap = null;
+function wavePos(e){
+  const c = $("wave"), r = c.getBoundingClientRect();
+  const t = Math.min(1, Math.max(0, (e.clientX - r.left)/r.width));
+  const v = Math.min(1, Math.max(0, 1 - (e.clientY - r.top - 8)/(r.height - 16)));
+  return {t, v, x:e.clientX - r.left, y:e.clientY - r.top, w:r.width, h:r.height};
+}
+function hitPt(m){
+  const pts = state.auto[state.lane];
+  for (let i = 0; i < pts.length; i++){
+    const x = pts[i].t*m.w, y = (1 - pts[i].v)*(m.h - 16) + 8;
+    if (Math.hypot(x - m.x, y - m.y) < 8) return i;
+  }
+  return -1;
+}
+const wave = $("wave");
+wave.addEventListener("pointerdown", e => {
+  if (!totalLen() || e.button === 2) return;
+  const m = wavePos(e), pts = state.auto[state.lane];
+  let i = hitPt(m);
+  dragSnap = snapshot();
+  if (i < 0){
+    pts.push({t:m.t, v:m.v}); pts.sort((a, b) => a.t - b.t);
+    i = pts.findIndex(q => q.t === m.t && q.v === m.v);
+  }
+  dragPt = i; wave.setPointerCapture(e.pointerId);
+  refreshKnobs(); drawWave(); markStale();
+});
+wave.addEventListener("pointermove", e => {
+  const m = wavePos(e), pts = state.auto[state.lane];
+  if (dragPt >= 0){
+    const lo = dragPt > 0 ? pts[dragPt-1].t : 0, hi = dragPt < pts.length - 1 ? pts[dragPt+1].t : 1;
+    pts[dragPt] = {t:Math.min(hi, Math.max(lo, m.t)), v:m.v};
+    hoverPt = dragPt; drawWave(); markStale(); return;
+  }
+  const h = hitPt(m); if (h !== hoverPt){ hoverPt = h; drawWave(); }
+});
+wave.addEventListener("pointerup", () => { if (dragPt >= 0 && dragSnap !== snapshot()) pushUndo(dragSnap); dragPt = -1; dragSnap = null; });
+function delAt(e){
+  const i = hitPt(wavePos(e)); if (i < 0) return;
+  e.preventDefault(); pushUndo(snapshot()); state.auto[state.lane].splice(i, 1); hoverPt = -1; refreshKnobs(); drawWave(); markStale();
+}
+wave.addEventListener("dblclick", delAt);
+wave.addEventListener("contextmenu", delAt);
+$("ruler").addEventListener("pointerdown", e => { const r = e.target.getBoundingClientRect(); if (totalLen()) seek((e.clientX - r.left)/r.width*totalDur()); });
+$("fight").addEventListener("pointerdown", e => { const r = e.target.getBoundingClientRect(); if (totalLen()) seek((e.clientX - r.left)/r.width*totalDur()); });
+
+// ---------- WAV export ----------
+$("download").onclick = () => {
+  if (!outBuf) return;
+  const nch = outBuf.numberOfChannels, n = outBuf.length, sr = outBuf.sampleRate;
+  const ab = new ArrayBuffer(44 + n*nch*2), dv = new DataView(ab);
+  const w = (o, s) => [...s].forEach((ch, i) => dv.setUint8(o + i, ch.charCodeAt(0)));
+  w(0, "RIFF"); dv.setUint32(4, 36 + n*nch*2, true); w(8, "WAVE"); w(12, "fmt ");
+  dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, nch, true); dv.setUint32(24, sr, true);
+  dv.setUint32(28, sr*nch*2, true); dv.setUint16(32, nch*2, true); dv.setUint16(34, 16, true); w(36, "data"); dv.setUint32(40, n*nch*2, true);
+  const chs = []; for (let c = 0; c < nch; c++) chs.push(outBuf.getChannelData(c));
+  let o = 44;
+  for (let i = 0; i < n; i++) for (let c = 0; c < nch; c++){ const v = Math.max(-1, Math.min(1, chs[c][i])); dv.setInt16(o, Math.round(v*32767), true); o += 2; }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([ab], {type:"audio/wav"}));
+  a.download = nameA + "-brawl.wav"; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
+
+// ---------- presets ----------
+$("savePreset").onclick = () => {
+  const data = { app:"bandwidth-brawl", version:1,
+    knobs: Object.fromEntries(PARAMS.map(p => [p.id, state.knobs[p.id]])), auto: state.auto,
+    syncLoop: $("syncLoop").checked, syncHold: $("syncHold").checked, bpm: parseFloat($("bpm").value) || 120, seed: parseInt($("seed").value) || 0 };
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 1)], {type:"application/json"}));
+  a.download = "brawl-preset.json"; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
+$("loadPreset").onclick = () => $("presetFile").click();
+$("presetFile").onchange = async () => {
+  const f = $("presetFile").files[0]; $("presetFile").value = ""; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    if (d.app !== "bandwidth-brawl") throw new Error("not a Bandwidth Brawl preset");
+    pushUndo(snapshot());
+    PARAMS.forEach(p => {
+      if (typeof d.knobs?.[p.id] === "number") state.knobs[p.id] = Math.min(1, Math.max(0, d.knobs[p.id]));
+      state.auto[p.id] = Array.isArray(d.auto?.[p.id]) ? d.auto[p.id].filter(q => isFinite(q.t) && isFinite(q.v)).map(q => ({t:+q.t, v:+q.v})).sort((a, b) => a.t - b.t) : [];
+    });
+    $("syncLoop").checked = !!d.syncLoop; $("syncHold").checked = !!d.syncHold;
+    if (d.bpm) $("bpm").value = d.bpm; if (d.seed !== undefined) $("seed").value = d.seed;
+    refreshKnobs(); drawWave(); markStale();
+  } catch (e) { $("pystatus").textContent = "Couldn't load preset: " + e.message; $("pystatus").className = "status err"; }
+};
+
+function updateButtons(){
+  $("play").disabled = !bufA && !bufB;
+  $("play").textContent = playing ? "❚❚ Pause" : "▶ Play";
+  $("render").disabled = !bufA || !pyodide || rendering;
+  $("render").textContent = rendering ? "Rendering…" : "Render";
+  $("download").disabled = !outBuf || rendering;
+  $("undo").disabled = !undoStack.length; $("redo").disabled = !redoStack.length;
+  const lb = document.querySelector('#listen button[data-v="out"]'); lb.disabled = !outBuf;
+  document.querySelector('#listen button[data-v="a"]').disabled = !bufA;
+  document.querySelector('#listen button[data-v="b"]').disabled = !bufB;
+}
+
+refreshKnobs(); resize(); markStale(); updateButtons(); setListen("a");
+</script>
+</body>
+</html>

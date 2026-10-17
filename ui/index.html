@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bandwidth Brawl</title>
+<style>
+:root{
+  --platinum:#dcdce0; --platinum-hi:#ececef; --platinum-lo:#c4c4ca; --etch:#9c9ca4;
+  --ink:#000; --ink-soft:#4a4a52; --inset:#f4f4f6;
+  --blue:#009ddc; --blue-dk:#00699a; --red:#e03a3e; --red-dk:#9e1f23; --graphite:#6e6e78;
+  --ui:"Lucida Grande","Lucida Sans Unicode",Geneva,Verdana,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:#b9b9c0;font:12px/1.3 var(--ui);color:var(--ink);display:flex;align-items:center;justify-content:center;
+  -webkit-user-select:none;user-select:none}
+body.in-plugin{background:var(--platinum)}
+.window{width:820px;max-width:100%;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.55) 0 1px,rgba(255,255,255,0) 1px 2px,rgba(0,0,0,.035) 2px 3px,rgba(0,0,0,0) 3px 4px),var(--platinum);
+  border:1px solid #7d7d86;border-radius:9px;box-shadow:0 1px 0 #fff inset,0 14px 40px rgba(0,0,0,.28);overflow:hidden}
+body.in-plugin .window{border:0;border-radius:0;box-shadow:none;width:100%;height:100%}
+
+/* title bar */
+.titlebar{display:flex;align-items:center;gap:12px;padding:9px 14px 8px;background:linear-gradient(#f6f6f8,#d6d6db);border-bottom:1px solid #8e8e96}
+.badge{display:flex;width:22px;height:18px;border-radius:3px;overflow:hidden;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.badge i{flex:1}
+.titlebar h1{margin:0;font-size:15px;font-weight:700;letter-spacing:-.2px}
+.titlebar .sub{color:var(--ink-soft);font-size:11px}
+.titlebar .sub .ver{margin-left:6px;color:#7a7a84;font-variant-numeric:tabular-nums}
+.spacer{flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700;
+  background:linear-gradient(#fff,#d9d9de);border:1px solid #8e8e96;box-shadow:0 1px 0 rgba(255,255,255,.8) inset;white-space:nowrap}
+.chip.off{color:#7a7a84;font-weight:400}
+.chip.off .dot{filter:grayscale(1);opacity:.5}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none;box-shadow:0 0 0 1px rgba(0,0,0,.4) inset,0 1px 1px rgba(255,255,255,.6)}
+.dot.a{background:radial-gradient(circle at 35% 30%,#bfeaff,var(--blue) 55%,var(--blue-dk))}
+.dot.b{background:radial-gradient(circle at 35% 30%,#ffc9ca,var(--red) 55%,var(--red-dk))}
+
+.body{padding:12px 14px;display:grid;gap:10px}
+.panel{background:var(--platinum-hi);border:1px solid var(--etch);border-radius:6px;box-shadow:0 1px 0 #fff,0 1px 2px rgba(0,0,0,.12) inset;padding:9px 10px}
+.panel-head{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.panel-head h2{margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px}
+.panel-head .bar{height:3px;width:18px;border-radius:2px}
+.readout{font-size:11px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.readout b{color:var(--ink)}
+
+/* territory */
+.strip{display:block;width:100%;height:104px;background:#0b0b0e;border-radius:4px;box-shadow:0 0 0 1px #000,0 2px 4px rgba(0,0,0,.5) inset}
+.legend{display:flex;align-items:center;gap:14px;margin-top:5px;font-size:10.5px;color:var(--ink-soft)}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.tug{margin-top:8px;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}
+.tug .lbl{font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px;min-width:64px;font-variant-numeric:tabular-nums}
+.tug .lbl.r{justify-content:flex-end}
+.meter{position:relative;height:16px;border-radius:8px;overflow:hidden;background:#2a2a30;box-shadow:0 0 0 1px #55555c,0 2px 3px rgba(0,0,0,.6) inset}
+.meter .fa,.meter .fb{position:absolute;top:0;bottom:0;transition:width 60ms linear}
+.meter .fa{left:0;background:linear-gradient(#7fd3f5,var(--blue) 45%,var(--blue-dk))}
+.meter .fb{right:0;background:linear-gradient(#f59a9c,var(--red) 45%,var(--red-dk))}
+.meter .gloss{position:absolute;left:4px;right:4px;top:2px;height:5px;border-radius:4px;background:linear-gradient(rgba(255,255,255,.55),rgba(255,255,255,0))}
+.meter .centre{position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:rgba(255,255,255,.75)}
+
+/* controls */
+.groups{display:grid;grid-template-columns:1fr 172px;gap:10px}
+.stack{display:grid;gap:10px}
+.knobs{display:flex;justify-content:space-around;gap:4px}
+.side .knobs{flex-direction:column;align-items:center;gap:7px}
+.knob{display:flex;flex-direction:column;align-items:center;gap:3px;width:92px;outline:none;border-radius:6px;padding:2px 0;cursor:ns-resize;touch-action:none}
+.knob:focus-visible{box-shadow:0 0 0 2px var(--blue)}
+.knob .name{font-size:11px;font-weight:700;white-space:nowrap}
+.knob .val{font-size:10.5px;color:var(--ink-soft);background:var(--inset);border:1px solid #b4b4bb;border-radius:3px;padding:1px 5px;min-width:66px;text-align:center;
+  box-shadow:0 1px 1px rgba(0,0,0,.12) inset;white-space:nowrap;font-variant-numeric:tabular-nums}
+.dial{--v:.5;--s:58px;position:relative;width:var(--s);height:var(--s);border-radius:50%;padding:5px}
+.dial::before{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--platinum)}
+.cap{position:absolute;inset:7px;border-radius:50%;
+  background:radial-gradient(circle at 50% 22%,rgba(255,255,255,.95) 0 18%,rgba(255,255,255,0) 46%),radial-gradient(circle at 50% 80%,#f7f7fa,#c8c8ce 60%,#9a9aa3);
+  box-shadow:0 2px 3px rgba(0,0,0,.35),0 0 0 1px #7d7d86,0 -1px 0 rgba(255,255,255,.8) inset}
+.cap::after{content:"";position:absolute;left:50%;top:5px;width:3px;height:30%;margin-left:-1.5px;border-radius:2px;background:#1a1a1e;
+  transform-origin:50% calc(var(--s)/2 - 12px);transform:rotate(calc(-135deg + var(--v)*270deg))}
+.knob.sm{width:80px}
+.knob.sm .dial{--s:44px}
+.knob.sm .cap::after{top:4px;transform-origin:50% calc(var(--s)/2 - 11px)}
+.knob.synced .val{color:var(--blue-dk);font-weight:700}
+.row-extra{display:flex;align-items:center;gap:16px;margin-top:7px;padding-top:7px;border-top:1px solid #c4c4ca;font-size:11px}
+.chk{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.check{width:14px;height:14px;border-radius:3px;border:1px solid #6e6e78;background:linear-gradient(#fff,#d4d4da);position:relative;cursor:pointer;padding:0;box-shadow:0 1px 0 rgba(255,255,255,.8)}
+.check[aria-checked="true"]{background:linear-gradient(#bfeaff,var(--blue) 60%,var(--blue-dk));border-color:var(--blue-dk)}
+.check[aria-checked="true"]::after{content:"";position:absolute;left:4px;top:1px;width:4px;height:7px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.check:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+footer{display:flex;align-items:center;gap:16px;padding:8px 14px;border-top:1px solid #a8a8b0;background:linear-gradient(#e4e4e8,#cfcfd5);font-size:11px;color:var(--ink-soft)}
+footer label{display:inline-flex;align-items:center;gap:6px;color:var(--ink)}
+input[type=number]{font:11px var(--ui);width:58px;padding:2px 5px;border:1px solid #8a8a92;border-radius:3px;box-shadow:inset 0 1px 2px rgba(0,0,0,.2);background:#fff}
+.hint{font-size:10.5px;color:var(--ink-soft)}
+</style>
+</head>
+<body>
+<div class="window" role="application" aria-label="Bandwidth Brawl">
+  <div class="titlebar">
+    <span class="badge" aria-hidden="true"><i style="background:var(--blue)"></i><i style="background:var(--red)"></i></span>
+    <h1>Bandwidth Brawl</h1>
+    <span class="sub">Bytebent Audio<span class="ver" id="version"></span></span>
+    <span class="spacer"></span>
+    <span class="chip"><span class="dot a"></span>A&nbsp;&#xb7;&nbsp;this track</span>
+    <span class="chip off" id="chipB" title="Pick a track in Ableton's sidechain menu for this plugin"><span class="dot b"></span><span id="chipBText">B&nbsp;&#xb7;&nbsp;no sidechain signal</span></span>
+  </div>
+
+  <div class="body">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Territory</h2>
+        <span class="spacer"></span>
+        <span class="readout" id="terrRead">A holds <b>&#x2013;</b> &#xb7; B holds <b>&#x2013;</b> &#xb7; loop <b>&#x2013;</b></span>
+      </div>
+      <canvas class="strip" id="strip" aria-label="Loop buffer: who wrote each part"></canvas>
+      <div class="legend">
+        <span><span class="sw" style="background:var(--blue)"></span>written by A</span>
+        <span><span class="sw" style="background:var(--red)"></span>written by B</span>
+        <span>fades to grey over 1 s</span>
+        <span class="spacer"></span>
+        <span>white line: playhead</span>
+      </div>
+      <div class="tug" title="Who is getting the bandwidth right now">
+        <span class="lbl"><span class="dot a"></span><span id="tugA">A &#x2013;</span></span>
+        <div class="meter"><div class="fa" id="fa" style="width:50%"></div><div class="fb" id="fb" style="width:50%"></div><div class="gloss"></div><div class="centre"></div></div>
+        <span class="lbl r"><span id="tugB">&#x2013; B</span><span class="dot b"></span></span>
+      </div>
+    </div>
+
+    <div class="groups">
+      <div class="stack">
+        <div class="panel">
+          <div class="panel-head"><span class="bar" style="background:linear-gradient(90deg,var(--blue) 50%,var(--red) 50%)"></span><h2>Fight</h2></div>
+          <div class="knobs" id="g_fight"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="bar" style="background:var(--graphite)"></span><h2>Buffer</h2></div>
+          <div class="knobs" id="g_buffer"></div>
+          <div class="row-extra">
+            <span class="chk"><button class="check" id="loopSync" role="checkbox" aria-checked="false" aria-label="Sync loop to tempo"></button><span data-for="loopSync">Sync loop to tempo</span></span>
+            <span class="chk"><button class="check" id="holdSync" role="checkbox" aria-checked="false" aria-label="Sync hold to tempo"></button><span data-for="holdSync">Sync hold to tempo</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="panel side">
+        <div class="panel-head"><span class="bar" style="background:var(--graphite)"></span><h2>In / Out</h2></div>
+        <div class="knobs" id="g_io"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span class="chk"><button class="check" id="resetOnPlay" role="checkbox" aria-checked="true" aria-label="Reset when playback starts"></button><span data-for="resetOnPlay" style="color:var(--ink)">Reset when playback starts</span></span>
+    <label>Seed <input type="number" id="seed" min="0" max="9999" step="1" value="1"></label>
+    <span class="spacer"></span>
+    <span class="hint">Drag knobs up/down &#xb7; Shift for fine &#xb7; double-click to reset</span>
+  </footer>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   Parameter definitions. Ranges must match source/PluginProcessor.cpp.
+   Everything talks to the host in normalised 0..1 values.
+   ============================================================ */
+const LOOP_NOTES = ["1/64","1/32T","1/32","1/16T","1/16","1/8T","1/8","1/4T","1/4","1/2","1 bar","2 bars","4 bars"];
+const HOLD_NOTES = ["off","1/64","1/32","1/16T","1/16","1/8T","1/8","1/4","1/2","1 bar"];
+const ms = v => v < 0.5 ? "off" : Math.round(v) + " ms";
+const pct = v => Math.round(v*100) + "%";
+const db = v => { const r = Math.round(v*10)/10; return (r > 0 ? "+" : r < 0 ? "\u2212" : "") + Math.abs(r).toFixed(1) + " dB"; };
+const PARAMS = {
+  budget:    {label:"Budget", g:"g_fight", min:0.5, max:1000, def:24, scale:"log", c:"blue", fmt:v => (v < 10 ? v.toFixed(1) : Math.round(v)) + " kB/s"},
+  bias:      {label:"Bias", g:"g_fight", min:-1, max:1, def:0, c:"bi", fmt:v => { const a = Math.round((1 - v)*50); return a === 50 ? "even" : `A ${a} : ${100 - a} B`; }},
+  sharpness: {label:"Sharpness", g:"g_fight", min:0, max:1, def:0.5, c:"red", fmt:v => v <= 0.005 ? "soft" : v >= 0.995 ? "hard" : pct(v)},
+  hold:      {label:"Hold", g:"g_fight", min:0, max:1000, def:0, scale:"cube", c:"blue", fmt:ms},
+  holdDiv:   {label:"Hold", g:null, min:0, max:HOLD_NOTES.length - 1, def:4, int:true, c:"blue", fmt:v => HOLD_NOTES[v]},
+  savings:   {label:"Savings", g:"g_fight", min:0, max:2000, def:0, scale:"cube", c:"red", fmt:ms},
+  loop:      {label:"Loop", g:"g_buffer", sm:1, min:1, max:4000, def:250, scale:"log", c:"blue",
+              fmt:v => v < 10 ? v.toFixed(1) + " ms" : v < 1000 ? Math.round(v) + " ms" : (v/1000).toFixed(2) + " s"},
+  loopDiv:   {label:"Loop", g:null, sm:1, min:0, max:LOOP_NOTES.length - 1, def:6, int:true, c:"blue", fmt:v => LOOP_NOTES[v]},
+  chunk:     {label:"Chunk", g:"g_buffer", sm:1, min:1, max:4096, def:64, scale:"log", int:true, c:"red", fmt:v => v + " smp"},
+  smooth:    {label:"Smoothing", g:"g_buffer", sm:1, min:0, max:1, def:0.5, c:"blue", fmt:pct},
+  memory:    {label:"Memory", g:"g_buffer", sm:1, min:0, max:1, def:1, c:"red", fmt:pct},
+  bits:      {label:"Bits", g:"g_buffer", sm:1, min:2, max:16, def:16, int:true, c:"blue", fmt:v => v + ""},
+  randomness:{label:"Random", g:"g_buffer", sm:1, min:0, max:1, def:0, c:"red", fmt:pct},
+  bTrim:     {label:"B Trim", g:"g_io", sm:1, min:-24, max:24, def:0, c:"red", fmt:db},
+  mix:       {label:"Mix", g:"g_io", sm:1, min:0, max:1, def:1, c:"blue", fmt:v => pct(v) + " wet"},
+  outGain:   {label:"Output", g:"g_io", sm:1, min:-24, max:12, def:0, c:"graphite", fmt:db},
+};
+const TIPS = {
+  budget:"Total bytes per second for both inputs together.",
+  bias:"Tilts the fight. Left favours A, right favours B.",
+  sharpness:"Soft: both move, unevenly. Hard: only the winner moves.",
+  hold:"Once a side wins, it keeps the upper hand at least this long.",
+  holdDiv:"Once a side wins, it keeps the upper hand at least this long.",
+  savings:"An idle side banks its fair share and spends it in a burst when it changes again.",
+  loop:"Length of the shared loop buffer.", loopDiv:"Length of the shared loop buffer.",
+  chunk:"Samples written at a time. Small = fizz, large = fragments.",
+  smooth:"Crossfade where a written chunk meets the audio around it.",
+  memory:"How much unrefreshed audio is left after 1 second.",
+  bits:"Quantisation of written samples. Fewer bits = more samples fit in the budget.",
+  randomness:"0 = most-changed chunks first, 1 = random picks.",
+  bTrim:"Sidechain level. Louder B changes more, so it fights harder.",
+  mix:"Dry is A and B summed, wet is the loop buffer.",
+  outGain:"After the mix, into a soft limiter.",
+};
+function toPlain(p, n){
+  n = Math.min(1, Math.max(0, n));
+  let v = p.scale === "log" ? p.min*Math.pow(p.max/p.min, n) : p.scale === "cube" ? p.min + n*n*n*(p.max - p.min) : p.min + n*(p.max - p.min);
+  return p.int ? Math.round(v) : v;
+}
+function toNorm(p, v){
+  if (p.scale === "log") return Math.log(v/p.min)/Math.log(p.max/p.min);
+  if (p.scale === "cube") return Math.cbrt((v - p.min)/(p.max - p.min));
+  return (v - p.min)/(p.max - p.min);
+}
+
+/* ============================================================
+   Host bridge. Inside the plugin, JUCE's WebView backend is used;
+   in a normal browser, a stand-in with a fake loop view so the
+   page can be judged on its own.
+   ============================================================ */
+const Host = (() => {
+  const juce = window.__JUCE__ && window.__JUCE__.backend;
+  const listeners = {}, values = {};
+  const fire = (id, n) => (listeners[id] || []).forEach(cb => cb(n));
+  if (juce){
+    document.body.classList.add("in-plugin");
+    juce.addEventListener("param", e => { values[e.id] = e.value; fire(e.id, e.value); });
+    return {
+      inPlugin: true,
+      set: (id, n) => { values[id] = n; juce.emitEvent("setParam", {id, value:n}); },
+      begin: id => juce.emitEvent("gesture", {id, begin:true}),
+      end: id => juce.emitEvent("gesture", {id, begin:false}),
+      on: (id, cb) => (listeners[id] = listeners[id] || []).push(cb),
+      onLoopView: cb => juce.addEventListener("loopview", cb),
+      ready: () => juce.emitEvent("uiReady", {}),
+    };
+  }
+  let loopCb = null;
+  return {
+    inPlugin: false,
+    set: (id, n) => { values[id] = n; },
+    begin(){}, end(){},
+    on: (id, cb) => (listeners[id] = listeners[id] || []).push(cb),
+    onLoopView: cb => { loopCb = cb; },
+    ready(){ startPreview(f => loopCb && loopCb(f)); },
+  };
+})();
+
+/* ============================================================
+   Knobs
+   ============================================================ */
+const knobs = {};
+function ringBg(p, n){
+  const grey = "#b9b9c0";
+  if (p.c === "bi"){
+    const a = Math.min(n, .5)*270, b = Math.max(n, .5)*270, col = n < .5 ? "var(--blue)" : "var(--red)";
+    return `conic-gradient(from 225deg, ${grey} 0 ${a}deg, ${col} ${a}deg ${b}deg, ${grey} ${b}deg 270deg, transparent 270deg)`;
+  }
+  const d = n*270;
+  return `conic-gradient(from 225deg, var(--${p.c}) 0 ${d}deg, ${grey} ${d}deg 270deg, transparent 270deg)`;
+}
+function makeKnob(id, mount){
+  const p = PARAMS[id];
+  const el = document.createElement("div");
+  el.className = "knob" + (p.sm ? " sm" : "");
+  el.tabIndex = 0; el.title = TIPS[id] || "";
+  el.setAttribute("role", "slider"); el.setAttribute("aria-label", p.label);
+  el.innerHTML = `<div class="dial"><div class="cap"></div></div><span class="name">${p.label}</span><span class="val"></span>`;
+  mount.appendChild(el);
+  const k = {id, p, el, dial: el.querySelector(".dial"), norm: toNorm(p, p.def)};
+  knobs[id] = k;
+  const set = (n, fromHost) => {
+    n = Math.min(1, Math.max(0, n));
+    if (p.int) n = toNorm(p, toPlain(p, n));
+    k.norm = n; draw(k);
+    if (!fromHost) Host.set(id, n);
+  };
+  k.set = set;
+  let dragY = null, startN = 0;
+  el.addEventListener("pointerdown", e => {
+    if (e.button !== 0) return;
+    el.focus(); el.setPointerCapture(e.pointerId);
+    dragY = e.clientY; startN = k.norm; Host.begin(id);
+  });
+  el.addEventListener("pointermove", e => {
+    if (dragY === null) return;
+    const range = p.int && (p.max - p.min) < 20 ? 120 : (e.shiftKey ? 900 : 180);
+    set(startN + (dragY - e.clientY)/range);
+    if (e.shiftKey){ dragY = e.clientY; startN = k.norm; }
+  });
+  const endDrag = () => { if (dragY !== null){ dragY = null; Host.end(id); } };
+  el.addEventListener("pointerup", endDrag); el.addEventListener("pointercancel", endDrag);
+  el.addEventListener("dblclick", () => { Host.begin(id); set(toNorm(p, p.def)); Host.end(id); });
+  el.addEventListener("wheel", e => {
+    e.preventDefault();
+    const step = p.int ? 1/(p.max - p.min) : (e.shiftKey ? 0.002 : 0.02);
+    Host.begin(id); set(k.norm - Math.sign(e.deltaY)*step); Host.end(id);
+  }, {passive:false});
+  el.addEventListener("keydown", e => {
+    const step = p.int ? 1/(p.max - p.min) : (e.shiftKey ? 0.002 : 0.02);
+    const d = {ArrowUp:step, ArrowRight:step, ArrowDown:-step, ArrowLeft:-step}[e.key];
+    if (d){ e.preventDefault(); Host.begin(id); set(k.norm + d); Host.end(id); }
+  });
+  Host.on(id, n => set(n, true));
+  draw(k);
+  return el;
+}
+function draw(k){
+  const v = toPlain(k.p, k.norm), txt = k.p.fmt(v);
+  k.dial.style.setProperty("--v", k.norm);
+  k.dial.style.background = ringBg(k.p, k.norm);
+  k.el.querySelector(".val").textContent = txt;
+  k.el.setAttribute("aria-valuetext", txt);
+}
+
+for (const [id, p] of Object.entries(PARAMS)) if (p.g) makeKnob(id, document.getElementById(p.g));
+// Tempo-synced versions share their knob's slot and are swapped in when sync is on.
+const holdDivEl = makeKnob("holdDiv", document.getElementById("g_fight")); knobs.hold.el.after(holdDivEl);
+const loopDivEl = makeKnob("loopDiv", document.getElementById("g_buffer")); knobs.loop.el.after(loopDivEl);
+holdDivEl.classList.add("synced"); loopDivEl.classList.add("synced");
+
+/* ============================================================
+   Toggles and seed
+   ============================================================ */
+const toggles = {};
+function makeToggle(id, def, onChange){
+  const el = document.getElementById(id);
+  const get = () => el.getAttribute("aria-checked") === "true";
+  const set = (on, fromHost) => {
+    el.setAttribute("aria-checked", on ? "true" : "false");
+    if (!fromHost) Host.set(id, on ? 1 : 0);
+    onChange && onChange(on);
+  };
+  toggles[id] = {get};
+  el.addEventListener("click", () => set(!get()));
+  document.querySelectorAll(`[data-for="${id}"]`).forEach(l => { l.style.cursor = "pointer"; l.addEventListener("click", () => el.click()); });
+  Host.on(id, n => set(n >= 0.5, true));
+  set(def, true);
+}
+makeToggle("loopSync", false, on => { knobs.loop.el.style.display = on ? "none" : ""; loopDivEl.style.display = on ? "" : "none"; });
+makeToggle("holdSync", false, on => { knobs.hold.el.style.display = on ? "none" : ""; holdDivEl.style.display = on ? "" : "none"; });
+makeToggle("resetOnPlay", true);
+const seedEl = document.getElementById("seed");
+seedEl.addEventListener("change", () => {
+  const v = Math.max(0, Math.min(9999, parseInt(seedEl.value) || 0)); seedEl.value = v;
+  Host.set("seed", v/9999);
+});
+Host.on("seed", n => { seedEl.value = Math.round(n*9999); });
+
+// Version comes from the plugin build (CMake project version), so it can't go stale.
+(() => {
+  const d = window.__JUCE__ && window.__JUCE__.initialisationData && window.__JUCE__.initialisationData.version;
+  const v = Array.isArray(d) ? d[0] : d;
+  document.getElementById("version").textContent = v ? "v" + v : "preview";
+})();
+
+/* ============================================================
+   Territory strip, tug-of-war meter, sidechain chip
+   frame = {amp[], own[] (0 none, 1 A, 2 B), age[] (s since written),
+            shareA, holdA, holdB, sideLevel, loopMs, playhead}
+   ============================================================ */
+const canvas = document.getElementById("strip");
+const BLUE = [0,157,220], RED = [224,58,62], GREY = [85,85,92];
+let lastFrame = null;
+function fmtLoop(v){ return v < 10 ? v.toFixed(1) + " ms" : v < 1000 ? Math.round(v) + " ms" : (v/1000).toFixed(2) + " s"; }
+function drawFrame(f){
+  lastFrame = f;
+  const dpr = window.devicePixelRatio || 1, W = canvas.clientWidth, H = canvas.clientHeight;
+  if (canvas.width !== Math.round(W*dpr) || canvas.height !== Math.round(H*dpr)){ canvas.width = Math.round(W*dpr); canvas.height = Math.round(H*dpr); }
+  const g = canvas.getContext("2d");
+  g.setTransform(dpr,0,0,dpr,0,0);
+  g.fillStyle = "#0b0b0e"; g.fillRect(0, 0, W, H);
+  const n = f.amp.length, bw = W/n, mid = H/2;
+  for (let i = 0; i < n; i++){
+    const own = f.own[i], base = own === 1 ? BLUE : own === 2 ? RED : GREY;
+    const k = own ? 0.85*Math.min(1, Math.max(0, f.age[i])) : 0;   // fade to grey over 1 s
+    g.fillStyle = `rgb(${base.map((v, j) => Math.round(v + (GREY[j] - v)*k))})`;
+    const h = Math.max(1, Math.sqrt(Math.min(1, f.amp[i]))*(mid - 4));
+    g.fillRect(Math.floor(i*bw), mid - h, Math.max(1, Math.ceil(bw) - 1), h*2);
+  }
+  g.fillStyle = "rgba(255,255,255,.08)"; g.fillRect(0, mid, W, 1);
+  if (f.playhead != null){
+    g.shadowColor = "#fff"; g.shadowBlur = 8; g.fillStyle = "#fff";
+    g.fillRect(Math.round(f.playhead*W) - 1, 0, 2, H); g.shadowBlur = 0;
+  }
+  document.getElementById("terrRead").innerHTML =
+    `A holds <b>${Math.round(f.holdA*100)}%</b> \u00b7 B holds <b>${Math.round(f.holdB*100)}%</b> \u00b7 loop <b>${fmtLoop(f.loopMs)}</b>`;
+  const a = Math.min(1, Math.max(0, f.shareA));
+  document.getElementById("fa").style.width = (a*100) + "%";
+  document.getElementById("fb").style.width = ((1 - a)*100) + "%";
+  document.getElementById("tugA").textContent = "A " + Math.round(a*100) + "%";
+  document.getElementById("tugB").textContent = Math.round((1 - a)*100) + "% B";
+  const live = f.sideLevel > 0.001;   // about -60 dBFS
+  document.getElementById("chipB").classList.toggle("off", !live);
+  document.getElementById("chipBText").innerHTML = live ? "B&nbsp;\u00b7&nbsp;sidechain" : "B&nbsp;\u00b7&nbsp;no sidechain signal";
+}
+function drawEmpty(){
+  const dpr = window.devicePixelRatio || 1, W = canvas.clientWidth, H = canvas.clientHeight;
+  canvas.width = Math.round(W*dpr); canvas.height = Math.round(H*dpr);
+  const g = canvas.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0);
+  g.fillStyle = "#0b0b0e"; g.fillRect(0, 0, W, H);
+  g.fillStyle = "#55555c"; g.font = "12px " + getComputedStyle(document.body).fontFamily; g.textAlign = "center";
+  g.fillText("Waiting for audio\u2026", W/2, H/2 + 4);
+}
+drawEmpty();
+Host.onLoopView(drawFrame);
+window.addEventListener("resize", () => lastFrame ? drawFrame(lastFrame) : drawEmpty());
+
+/* ============================================================
+   Browser-only preview (not used in the plugin): a made-up fight
+   so the strip and meter move while you judge the design.
+   ============================================================ */
+function startPreview(emit){
+  const N = 240, own = new Array(N).fill(0), age = new Array(N).fill(99), amp = new Array(N).fill(0);
+  let pos = 0, t = 0, last = performance.now(), share = 0.5;
+  function step(now){
+    const dt = Math.min(0.1, (now - last)/1000); last = now; t += dt;
+    const target = 0.5 + 0.45*Math.sin(t*0.9)*Math.sin(t*0.37 + 1);
+    share += (target - share)*Math.min(1, dt*4);
+    const adv = Math.max(1, Math.round(dt*N/0.5));
+    for (let k = 0; k < adv; k++){
+      const i = (pos + k) % N;
+      if (Math.random() < 0.9){
+        const a = Math.random() < share;
+        own[i] = a ? 1 : 2; age[i] = 0;
+        amp[i] = a ? 0.35 + 0.2*Math.sin(i*0.15 + t) : (i % 30 < 4 ? 0.9 : 0.15 + 0.4*Math.exp(-(i % 30)/6));
+      }
+    }
+    pos = (pos + adv) % N;
+    for (let i = 0; i < N; i++) age[i] += dt;
+    const hA = own.filter(o => o === 1).length/N, hB = own.filter(o => o === 2).length/N;
+    emit({amp, own, age, shareA: share, holdA: hA, holdB: hB, sideLevel: 0.1, loopMs: 250, playhead: pos/N});
+    requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+Host.ready();
+</script>
+</body>
+</html>
